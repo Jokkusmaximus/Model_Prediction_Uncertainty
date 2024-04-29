@@ -141,7 +141,7 @@ traindataset, testdataset = TensorDataset(x_train, y_train), TensorDataset(
     x_test, y_test
 )
 trainloader = DataLoader(
-    traindataset, batch_size=BATCH_SIZE, num_workers=15, generator=g
+    traindataset, batch_size=BATCH_SIZE, num_workers=15, generator=g        # changed from 15 to 8, to fit system
 )
 testloader = DataLoader(testdataset, batch_size=BATCH_SIZE, num_workers=15, generator=g)
 
