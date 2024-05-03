@@ -1,7 +1,8 @@
-'''
+"""
 Created on 01.05.24
 by: jokkus
-'''
+"""
+
 import torch
 from torch import nn
 import lightning as L
@@ -15,6 +16,7 @@ class ModelNetwork(L.LightningModule):
     The Network which predicts the next observation / state
     !also gets env as input/init, to determine net size!
     """
+
     def __init__(self, env):
         super().__init__()
         self.layer1 = nn.Linear(

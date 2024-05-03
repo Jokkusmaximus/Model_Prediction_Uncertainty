@@ -5,7 +5,7 @@ import gymnasium as gym
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter                   # TODO
+from torch.utils.tensorboard import SummaryWriter  # TODO
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -67,8 +67,8 @@ y = np.zeros(shape=(NUM_ENV_SAMPLES, env.observation_space.shape[0]), dtype=np.f
 obs, info = env.reset(seed=SEED)
 for i in range(NUM_ENV_SAMPLES):
     action = env.action_space.sample()
-    x[i, 0: env.observation_space.shape[0]] = obs
-    x[i, env.observation_space.shape[0]:] = action
+    x[i, 0 : env.observation_space.shape[0]] = obs
+    x[i, env.observation_space.shape[0] :] = action
     prev_obs = obs
     obs, rew, term, trunc, _ = env.step(action)
     # target is difference between consecutive states
@@ -105,7 +105,10 @@ traindataset, testdataset = TensorDataset(x_train, y_train), TensorDataset(
     x_test, y_test
 )
 trainloader = DataLoader(
-    traindataset, batch_size=BATCH_SIZE, num_workers=8, generator=g  # changed from 15 to 8, to fit system
+    traindataset,
+    batch_size=BATCH_SIZE,
+    num_workers=8,
+    generator=g,  # changed from 15 to 8, to fit system
 )
 testloader = DataLoader(testdataset, batch_size=BATCH_SIZE, num_workers=8, generator=g)
 
