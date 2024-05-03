@@ -7,7 +7,7 @@ import torch
 from torch import nn
 import lightning as L
 
-from settings import N_NEURONS_HIDDEN, LR
+from supplementary.settings import N_NEURONS_HIDDEN, LR
 
 
 # define network

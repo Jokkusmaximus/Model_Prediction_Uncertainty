@@ -1,11 +1,9 @@
-import datetime
 import random
 
 import gymnasium as gym
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter  # TODO
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -15,7 +13,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch import seed_everything
 
 from model_net import ModelNetwork
-from settings import NUM_ENV_SAMPLES, TRAIN_TEST_RELATIVE, N_EPOCHS, BATCH_SIZE, SEED
+from supplementary.settings import PROJECT_ENV, NUM_ENV_SAMPLES, TRAIN_TEST_RELATIVE, N_EPOCHS, BATCH_SIZE, SEED, wm_config
 
 # NOTE recommended
 # wandb
@@ -45,12 +43,12 @@ seed_everything(SEED, workers=True)
 # create env
 # NOTE setting up mujoco is troublesome
 # You can switch to any env you like
-env = gym.make("HalfCheetah-v4")
+env = gym.make(PROJECT_ENV)
 env.action_space.seed(SEED)
 
 
 # create model
-model = ModelNetwork()
+model = ModelNetwork(env=env)
 
 
 # sample train env interactions
@@ -113,11 +111,9 @@ trainloader = DataLoader(
 testloader = DataLoader(testdataset, batch_size=BATCH_SIZE, num_workers=8, generator=g)
 
 # Logging
+config_name = wm_config["config_name"]
 # timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-logger = TensorBoardLogger("test_run_1/", name="test")
-
-# init network
-model = ModelNetwork()
+logger = TensorBoardLogger(f"../logs/{config_name}/", name="test")
 
 # Train and test
 trainer = L.Trainer(
