@@ -54,9 +54,9 @@ def train_rl_model(
     logger = TensorBoardLogger("logs/rl_test_run1/", name="test")
 
     # Create directories for logs, checkpoints, and final model TODO: figure out if lightning.logger can be used
-    log_path = f"./logs/{config_name}/"
-    checkpoint_path = f"./logs/{config_name}/checkpoints/{current_time}/"
-    final_model_path = f"./logs/{config_name}/rl_model_{current_time}/ppo_model"
+    log_path = f"./logs/{config_name}/rl_model_{current_time}/"
+    checkpoint_path = f"./logs/{config_name}/rl_model_{current_time}/checkpoints/"
+    final_model_path = f"./logs/{config_name}/rl_model_{current_time}/ppo_model/"
 
     os.makedirs(log_path, exist_ok=True)
     os.makedirs(checkpoint_path, exist_ok=True)
