@@ -23,8 +23,10 @@ wm_config = {
 rl_config = {
     "policy_type": "MlpPolicy",
     "config_name": "rl_test",
-    "custom_max_episode_steps": 3000,
-    "custom_total_timesteps": 100000,
+    "custom_max_episode_steps": 300,
+    "custom_total_timesteps": 10000,
     "model_hyperparams": {},
     "description": "Add description",
 }
+
+NUM_SAVES = 10

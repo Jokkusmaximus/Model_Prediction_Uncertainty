@@ -16,7 +16,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from lightning.pytorch.loggers import TensorBoardLogger
 
 # Imports from own config files
-from supplementary.settings import PROJECT_ENV, rl_config
+from supplementary.settings import PROJECT_ENV, rl_config, NUM_SAVES
 from supplementary.progress_bar import ProgressBar
 
 
@@ -74,7 +74,7 @@ def train_rl_model(
     progress_bar = ProgressBar(total_timesteps=total_timesteps, verbose=1)
 
     checkpoint_callback = CheckpointCallback(
-        save_freq=total_timesteps / 100,
+        save_freq=total_timesteps / NUM_SAVES,
         save_path=checkpoint_path,
         name_prefix="checkpoint_model",
     )
