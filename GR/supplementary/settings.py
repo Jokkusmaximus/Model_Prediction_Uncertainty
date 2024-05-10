@@ -5,7 +5,6 @@ by: jokkus
 # project parameters
 PROJECT_ENV = "HalfCheetah-v4"
 
-
 # world model parameters
 NUM_ENV_SAMPLES = 300_000
 TRAIN_TEST_RELATIVE = 0.8
@@ -23,10 +22,20 @@ wm_config = {
 rl_config = {
     "policy_type": "MlpPolicy",
     "config_name": "rl_test",
-    "custom_max_episode_steps": 300,
-    "custom_total_timesteps": 10000,
+    "custom_max_episode_steps": 30,
+    "custom_total_timesteps": 2000,
     "model_hyperparams": {},
     "description": "Add description",
 }
+current_time = 0
 
 NUM_SAVES = 10
+
+
+def set_current_time(datetime):
+    global current_time
+    current_time = datetime
+    print(f"Time at training start is {current_time}")
+
+def get_current_time():
+    return current_time
