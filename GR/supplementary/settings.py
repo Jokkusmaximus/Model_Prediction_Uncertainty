@@ -4,6 +4,8 @@ by: jokkus
 """
 # project parameters
 PROJECT_ENV = "HalfCheetah-v4"
+ACTION_SPACE = 6            # taken from env config
+OBSERVATION_SPACE = 17      # taken from env config
 
 # world model parameters
 NUM_ENV_SAMPLES = 300_000

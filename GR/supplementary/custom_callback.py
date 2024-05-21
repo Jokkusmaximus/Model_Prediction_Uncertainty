@@ -2,6 +2,7 @@
 Created on 10.05.24
 by: jokkus
 """
+
 import os
 
 from stable_baselines3.common.callbacks import BaseCallback
@@ -10,13 +11,19 @@ import numpy as np
 from math import ceil
 from torch import Tensor
 
-from supplementary.settings import rl_config, get_current_time
+from supplementary.settings import (
+    rl_config,
+    get_current_time,
+    ACTION_SPACE,
+    OBSERVATION_SPACE,
+)
 
 
 class CustomCallback(BaseCallback):
     """
     A custom callback that derives from ``BaseCallback``.
-    TODO use to extract actions & observations from training/rollout
+
+    Used to extract and save actions, observations, rewards from PPO training
 
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
@@ -48,10 +55,17 @@ class CustomCallback(BaseCallback):
         )  # assuming the standard 2048 steps per rollout
 
         self.counter = 0
-        self.actions = np.empty(shape=self.total_steps, dtype=np.ndarray)
-        self.observations = np.empty(shape=self.total_steps, dtype=Tensor)
-        self.new_observations = np.empty(shape=self.total_steps, dtype=np.ndarray)
-        self.rewards = np.empty(shape=self.total_steps, dtype=np.ndarray)
+        self.action_observation_reward = pd.DataFrame()
+        self.actions = np.empty(
+            shape=(self.total_steps, ACTION_SPACE), dtype=np.ndarray
+        )
+        self.observations = np.empty(
+            shape=(self.total_steps, OBSERVATION_SPACE), dtype=Tensor
+        )
+        self.new_observations = np.empty(
+            shape=(self.total_steps, OBSERVATION_SPACE), dtype=np.ndarray
+        )
+        self.rewards = np.empty(shape=self.total_steps, dtype=np.float32)
 
     def _on_training_start(self) -> None:
         """
@@ -76,6 +90,7 @@ class CustomCallback(BaseCallback):
 
         :return: If the callback returns False, training is aborted early.
         """
+
         self.actions[self.counter] = self.locals["actions"]
         self.observations[self.counter] = self.locals["obs_tensor"]
         self.new_observations[self.counter] = self.locals["new_obs"]
@@ -83,35 +98,45 @@ class CustomCallback(BaseCallback):
 
         self.counter += 1
 
-        return True  # TODO change back to True to enable training.
+        return True  # must be true to enable training
 
     def _on_rollout_end(self) -> None:
         """
         This event is triggered before updating the policy.
         """
-        print("rollout ended.", f"steps: {self.counter}")
+        # print("rollout ended.", f"steps: {self.counter}")
         pass
 
     def _on_training_end(self) -> None:
         """
         This event is triggered before exiting the `learn()` method.
         """
-        print("training ended.", f"steps: {self.counter}")
-        print(f"total steps: {self.total_steps}")
+        # print("training ended.", f"steps: {self.counter}")
 
-        df_actions = pd.DataFrame(self.actions)
-        df_observation = pd.DataFrame(self.observations)
-        df_new_observations = pd.DataFrame(self.new_observations)
-        df_rewards = pd.DataFrame(self.rewards)
+        data = {
+            "actions": self.actions.tolist(),
+            "observations": self.observations.tolist(),
+            "new_obs": self.new_observations.tolist(),
+            "rewards": self.rewards,
+        }
 
+        df = pd.DataFrame(data)
 
-        config_name = rl_config["config_name"]  # Configuration name used in folder structure
+        config_name = rl_config[
+            "config_name"
+        ]  # Configuration name used in folder structure
         current_time = get_current_time()
-        log_path = f"./logs/{config_name}/rl_model_{current_time}/act_obs_rew/"
+        log_path = f"./logs/{config_name}/rl_model_{current_time}/"
 
         os.makedirs(log_path, exist_ok=True)
 
-        df_actions.to_csv(f"{log_path}actions")
-        df_observation.to_csv(f"{log_path}observations")
-        df_new_observations.to_csv(f"{log_path}new_observations")
-        df_rewards.to_csv(f"{log_path}rewards")
+        df.to_csv(f"{log_path}data.csv")
+
+        np.savez_compressed(
+            f"{log_path}data.npz",
+            actions=self.actions,
+            observations=self.observations,
+            new_observations=self.new_observations,
+            rewards=self.rewards,
+        )
+        # df.to_json(f"{log_path}data.json", default_handler=str)
