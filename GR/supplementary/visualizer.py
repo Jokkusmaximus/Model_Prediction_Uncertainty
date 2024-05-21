@@ -19,11 +19,12 @@ import matplotlib.pyplot as plt
 from matplotlib import colormaps
 
 from world_model.model_net import ModelNetwork
+from supplementary.settings import PROJECT_ENV
 
 
 def visualize_RL():
     # create env
-    env = gym.make("HalfCheetah-v4", render_mode="human")
+    env = gym.make(PROJECT_ENV, render_mode="human")
 
     # Sets an initial state, gets observations
     obs, _ = env.reset()
