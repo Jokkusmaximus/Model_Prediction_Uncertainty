@@ -112,7 +112,7 @@ def train_rl_model(
     # Configure Early stopping callback
     # Stop training if there is no improvement after more than 3 evaluations
     stop_train_callback = StopTrainingOnNoModelImprovement(
-        max_no_improvement_evals=5, min_evals=50, verbose=1
+        max_no_improvement_evals=15, min_evals=50, verbose=1
     )
     eval_callback = EvalCallback(
         env, eval_freq=1024, callback_after_eval=stop_train_callback, verbose=0
