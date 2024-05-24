@@ -17,7 +17,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback, StopTrainingO
 from lightning.pytorch.loggers import TensorBoardLogger
 
 # Imports from own config files
-from supplementary.settings import PROJECT_ENV, rl_config, NUM_SAVES, set_current_time
+from supplementary.settings import PROJECT_ENV, rl_config, NUM_SAVES, set_current_time, set_path_addition
 from supplementary.progress_bar import ProgressBar
 from supplementary.custom_callback import CustomCallback
 
@@ -58,11 +58,12 @@ def train_rl_model(
         current_time = datetime.now().strftime(
             "%Y%m%d-%H%M%S"
         )  # Current date and time for unique directory names
-        set_current_time(current_time)  # saving to acess from other methods
+        set_current_time(current_time)  # saving to access from other methods
+        set_path_addition(current_time)
         path_additional = current_time
-    config_name = rl_config[
-        "config_name"
-    ]  # Configuration name used in folder structure
+
+
+    config_name = rl_config["config_name"]  # Configuration name used in folder structure
 
     # Create directories for logs, checkpoints, and final model TODO: figure out if lightning.logger can be used
     log_path = f"./logs/{config_name}/rl_model_{path_additional}/"

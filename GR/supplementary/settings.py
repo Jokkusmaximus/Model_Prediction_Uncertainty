@@ -29,7 +29,10 @@ rl_config = {
     "model_hyperparams": {},
     "description": "Add description",
 }
+
+# imformation used when saving model and other relevant data
 current_time = 0
+path_addition = ""
 
 NUM_SAVES = 10
 
@@ -42,3 +45,11 @@ def set_current_time(datetime):
 
 def get_current_time():
     return current_time
+
+def set_path_addition(path):
+    global path_addition
+    path_addition = path
+    print(f"Path addition is {path_addition}")
+
+def get_path_addition():
+    return path_addition

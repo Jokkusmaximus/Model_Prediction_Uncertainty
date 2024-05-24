@@ -9,7 +9,7 @@ import torch
 import gymnasium as gym
 from lightning.pytorch import seed_everything
 
-from rl import train_rl
+from rl.train_rl import train_rl_model
 from supplementary.settings import SEED, PROJECT_ENV
 from supplementary.experiments import ex_different_lr
 
@@ -29,7 +29,7 @@ seed_everything(SEED, workers=True)
 env = gym.make(PROJECT_ENV)
 env.action_space.seed(SEED)
 
-# ex_different_lr(10, env)
+ex_different_lr(10, env)
 
-train_rl.train_rl_model(env=env)
+# train_rl_model(env=env)
 
