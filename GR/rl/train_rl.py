@@ -115,7 +115,7 @@ def train_rl_model(
         max_no_improvement_evals=5, min_evals=50, verbose=1
     )
     eval_callback = EvalCallback(
-        env, eval_freq=1000, callback_after_eval=stop_train_callback, verbose=0
+        env, eval_freq=1024, callback_after_eval=stop_train_callback, verbose=0
     )
 
     # Train model

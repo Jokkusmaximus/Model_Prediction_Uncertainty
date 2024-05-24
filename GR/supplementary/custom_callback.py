@@ -28,7 +28,7 @@ class CustomCallback(BaseCallback):
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
 
-    def __init__(self, verbose: int = 0, save_per_rollout=True):
+    def __init__(self, verbose: int = 0, save_per_rollout=False):
         super().__init__(verbose)
         # Those variables will be accessible in the callback
         # (they are defined in the base class)
@@ -56,8 +56,9 @@ class CustomCallback(BaseCallback):
         # Calculate array sizes based on expected length
         self.save_per_rollout = save_per_rollout
         if (
-            rl_config["custom_total_timesteps"] >= 2000000 or self.save_per_rollout
+            rl_config["custom_total_timesteps"] > 2000000 or self.save_per_rollout
         ):  # 2million is arbitrarily chosen, but larger means more RAM used
+            print("Saving per rollout")
             self.save_per_rollout = True
             self.array_size = 2048  # currently known, TODO: make dynamic: eg. self.locals["n_rollout_steps"]
 
