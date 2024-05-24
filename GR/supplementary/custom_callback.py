@@ -127,7 +127,10 @@ class CustomCallback(BaseCallback):
         """
         # print("rollout ended.", f"steps: {self.counter}")
         if self.save_per_rollout:
+            # update counters
             self.rollout_counter += 1
+            self.counter = 0
+            # save arrays
             np.savez_compressed(
                 f"{self.log_path}data_rollout{self.rollout_counter}.npz",
                 actions=self.actions,
