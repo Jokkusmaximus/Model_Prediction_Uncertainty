@@ -23,7 +23,7 @@ wm_config = {
 rl_config = {
     "policy_type": "MlpPolicy",
     "config_name": "rl_test",
-    "custom_max_episode_steps": 2048,    #TODO why not work, change or does the model need 2048 for the policy update?
+    "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000
     "custom_total_timesteps": 5000000,
     "learning_rate": 1e-3,
     "model_hyperparams": {},
@@ -46,10 +46,12 @@ def set_current_time(datetime):
 def get_current_time():
     return current_time
 
+
 def set_path_addition(path):
     global path_addition
     path_addition = path
-    print(f"Path addition is {path_addition}")
+    # print(f"Path addition is {path_addition}")
+
 
 def get_path_addition():
     return path_addition

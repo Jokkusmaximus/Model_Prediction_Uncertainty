@@ -29,7 +29,7 @@ seed_everything(SEED, workers=True)
 env = gym.make(PROJECT_ENV)
 env.action_space.seed(SEED)
 
-ex_different_lr(10, env)
+ex_different_lr(7, env)
 
 # train_rl_model(env=env)
 

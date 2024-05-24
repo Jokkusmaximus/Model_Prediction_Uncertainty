@@ -13,7 +13,7 @@ from torch import Tensor
 
 from supplementary.settings import (
     rl_config,
-    get_current_time,
+    get_path_addition,
     ACTION_SPACE,
     OBSERVATION_SPACE,
 )
@@ -28,7 +28,7 @@ class CustomCallback(BaseCallback):
     :param verbose: Verbosity level: 0 for no output, 1 for info messages, 2 for debug messages
     """
 
-    def __init__(self, verbose: int = 0):
+    def __init__(self, verbose: int = 0, save_per_rollout=True):
         super().__init__(verbose)
         # Those variables will be accessible in the callback
         # (they are defined in the base class)
@@ -49,28 +49,49 @@ class CustomCallback(BaseCallback):
         # to have access to the parent object
         # self.parent = None  # type: Optional[BaseCallback]
 
-        # calculate expected steps
-        self.total_steps = (
-            ceil(rl_config["custom_total_timesteps"] / 2048) * 2048
-        )  # assuming the standard 2048 steps per rollout
-
         self.counter = 0
+        self.rollout_counter = 0
+
+        # ** Array set-up **
+        # Calculate array sizes based on expected length
+        self.save_per_rollout = save_per_rollout
+        if (
+            rl_config["custom_total_timesteps"] >= 2000000 or self.save_per_rollout
+        ):  # 2million is arbitrarily chosen, but larger means more RAM used
+            self.save_per_rollout = True
+            self.array_size = 2048  # currently known, TODO: make dynamic: eg. self.locals["n_rollout_steps"]
+
+        else:
+            # calculate expected total steps
+            self.array_size = (
+                ceil(rl_config["custom_total_timesteps"] / 2048) * 2048
+            )  # assuming the standard 2048 steps per rollout
+
         self.action_observation_reward = pd.DataFrame()
-        self.actions = np.empty(
-            shape=(self.total_steps, ACTION_SPACE), dtype=np.ndarray
-        )
+        self.actions = np.empty(shape=(self.array_size, ACTION_SPACE), dtype=np.ndarray)
         self.observations = np.empty(
-            shape=(self.total_steps, OBSERVATION_SPACE), dtype=Tensor
+            shape=(self.array_size, OBSERVATION_SPACE), dtype=Tensor
         )
-        self.new_observations = np.empty(
-            shape=(self.total_steps, OBSERVATION_SPACE), dtype=np.ndarray
+        # self.new_observations = np.empty(
+        #     shape=(self.array_size, OBSERVATION_SPACE), dtype=np.ndarray
+        # )
+        # self.rewards = np.empty(shape=self.array_size, dtype=np.float32)
+
+        # ** Logging set-up **
+        self.config_name = rl_config[
+            "config_name"
+        ]  # Configuration name used in folder structure
+        self.path_addition = get_path_addition()
+        self.log_path = (
+            f"./logs/{self.config_name}/rl_model_{self.path_addition}/"  # TODO shorten?
         )
-        self.rewards = np.empty(shape=self.total_steps, dtype=np.float32)
 
     def _on_training_start(self) -> None:
         """
         This method is called before the first rollout starts.
         """
+        # Make folders used for saving the arrays later
+        os.makedirs(self.log_path, exist_ok=True)
         pass
 
     def _on_rollout_start(self) -> None:
@@ -93,8 +114,8 @@ class CustomCallback(BaseCallback):
 
         self.actions[self.counter] = self.locals["actions"]
         self.observations[self.counter] = self.locals["obs_tensor"]
-        self.new_observations[self.counter] = self.locals["new_obs"]
-        self.rewards[self.counter] = self.locals["rewards"]
+        # self.new_observations[self.counter] = self.locals["new_obs"]
+        # self.rewards[self.counter] = self.locals["rewards"]
 
         self.counter += 1
 
@@ -105,38 +126,35 @@ class CustomCallback(BaseCallback):
         This event is triggered before updating the policy.
         """
         # print("rollout ended.", f"steps: {self.counter}")
-        pass
+        if self.save_per_rollout:
+            self.rollout_counter += 1
+            np.savez_compressed(
+                f"{self.log_path}data_rollout{self.rollout_counter}.npz",
+                actions=self.actions,
+                observations=self.observations,
+                # new_observations=self.new_observations,
+                # rewards=self.rewards,
+            )
 
     def _on_training_end(self) -> None:
         """
         This event is triggered before exiting the `learn()` method.
         """
         # print("training ended.", f"steps: {self.counter}")
-
-        data = {
-            "actions": self.actions.tolist(),
-            "observations": self.observations.tolist(),
-            "new_obs": self.new_observations.tolist(),
-            "rewards": self.rewards,
-        }
-
-        df = pd.DataFrame(data)
-
-        config_name = rl_config[
-            "config_name"
-        ]  # Configuration name used in folder structure
-        current_time = get_current_time()
-        log_path = f"./logs/{config_name}/rl_model_{current_time}/"
-
-        os.makedirs(log_path, exist_ok=True)
-
-        df.to_csv(f"{log_path}data.csv")
-
-        np.savez_compressed(
-            f"{log_path}data.npz",
-            actions=self.actions,
-            observations=self.observations,
-            new_observations=self.new_observations,
-            rewards=self.rewards,
-        )
-        # df.to_json(f"{log_path}data.json", default_handler=str)
+        if not self.save_per_rollout:
+            np.savez_compressed(
+                f"{self.log_path}data.npz",
+                actions=self.actions,
+                observations=self.observations,
+                # new_observations=self.new_observations,
+                # rewards=self.rewards,
+            )
+        if self.save_per_rollout:
+            self.rollout_counter += 1
+            np.savez_compressed(
+                f"{self.log_path}data_rollout{self.rollout_counter}.npz",
+                actions=self.actions,
+                observations=self.observations,
+                # new_observations=self.new_observations,
+                # rewards=self.rewards,
+            )
