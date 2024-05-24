@@ -60,7 +60,7 @@ def visualize_RL():
     # env.close()
 
 
-def visualize_PCA(array=None, dims=None, save_path=None, title="Plot"):
+def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save=False):
     """
     TODO    +   make title include PCA
     :param array:
@@ -143,11 +143,14 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot"):
 
     if save_path is not None:
         fig.savefig(f"{save_path}PCA_{title}.png", bbox_inches="tight")
+        if full_save:   # save other relevant filetypes
+            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='pdf')
+            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='svg')
     pass
 
 
 def visualize_tSNE(
-    array=None, dims=None, save_path=None, title="Plot", time_calculations=True
+    array=None, dims=None, save_path=None, title="Plot", time_calculations=True, full_save=False
 ):
     if dims is None:
         visualize_tSNE(array=array, dims=3, save_path=save_path, title=title, time_calculations=time_calculations)  # 3D
@@ -184,4 +187,7 @@ def visualize_tSNE(
 
     if save_path is not None:
         fig.savefig(f"{save_path}tSNE_{title}.png", bbox_inches="tight")
+        if full_save:   # save other relevant filetypes
+            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='pdf')
+            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='svg')
     pass
