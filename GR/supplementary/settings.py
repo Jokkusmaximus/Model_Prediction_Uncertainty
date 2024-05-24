@@ -4,8 +4,8 @@ by: jokkus
 """
 # project parameters
 PROJECT_ENV = "HalfCheetah-v4"
-ACTION_SPACE = 6            # taken from env config
-OBSERVATION_SPACE = 17      # taken from env config
+ACTION_SPACE = 6  # taken from env config
+OBSERVATION_SPACE = 17  # taken from env config
 
 # world model parameters
 NUM_ENV_SAMPLES = 300_000
@@ -13,7 +13,6 @@ TRAIN_TEST_RELATIVE = 0.8
 N_EPOCHS = 25
 BATCH_SIZE = 256
 SEED = 40
-LR = 0.001
 N_NEURONS_HIDDEN = 256
 
 wm_config = {
@@ -24,8 +23,9 @@ wm_config = {
 rl_config = {
     "policy_type": "MlpPolicy",
     "config_name": "rl_test",
-    "custom_max_episode_steps": 30,
-    "custom_total_timesteps": 2000,
+    "custom_max_episode_steps": 2048,    #TODO why not work, change or does the model need 2048 for the policy update?
+    "custom_total_timesteps": 5000000,
+    "learning_rate": 1e-3,
     "model_hyperparams": {},
     "description": "Add description",
 }
@@ -38,6 +38,7 @@ def set_current_time(datetime):
     global current_time
     current_time = datetime
     print(f"Time at training start is {current_time}")
+
 
 def get_current_time():
     return current_time

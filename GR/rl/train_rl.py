@@ -2,6 +2,7 @@
 Created on 03.05.24
 by: jokkus
 """
+
 # Imports
 import os
 import json
@@ -12,7 +13,7 @@ import gymnasium as gym
 from gymnasium.wrappers import TimeLimit
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
-from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.callbacks import CheckpointCallback, StopTrainingOnNoModelImprovement, EvalCallback
 from lightning.pytorch.loggers import TensorBoardLogger
 
 # Imports from own config files
@@ -22,12 +23,14 @@ from supplementary.custom_callback import CustomCallback
 
 
 def train_rl_model(
-    env=None,
-    load_model=False,       # TODO, if needed can be found at https://github.com/Jokkusmaximus/tum-adlr-9/tree/main
-    model_path=None,        # TODO, if needed can be found at https://github.com/Jokkusmaximus/tum-adlr-9/tree/main
-    custom_model=False,     # TODO, if needed can be found at https://github.com/Jokkusmaximus/tum-adlr-9/tree/main
-    policy_kwargs=None,
-    render_mode=None,
+        env=None,
+        load_model=False,  # TODO, if needed can be found at https://github.com/Jokkusmaximus/tum-adlr-9/tree/main
+        model_path=None,  # TODO, if needed can be found at https://github.com/Jokkusmaximus/tum-adlr-9/tree/main
+        custom_model=False,  # TODO, if needed can be found at https://github.com/Jokkusmaximus/tum-adlr-9/tree/main
+        policy_kwargs=None,
+        render_mode=None,
+        path_additional=None,
+        learning_rate=None,
 ):
     # Model parameters
     policy_type = rl_config["policy_type"]
@@ -41,19 +44,30 @@ def train_rl_model(
     env = TimeLimit(env, max_episode_steps=max_episode_steps)
 
     # Model Setup
+    if learning_rate is None:
+        learning_rate = rl_config["learning_rate"]
     model = PPO(
-        policy=policy_type, env=env, **rl_config["model_hyperparams"]
+        policy=policy_type,
+        env=env,
+        **rl_config["model_hyperparams"],
+        learning_rate=learning_rate,
     )
 
     # Logging
-    current_time = datetime.now().strftime("%Y%m%d-%H%M%S")     # Current date and time for unique directory names
-    set_current_time(current_time)                              # saving to acess from other methods
-    config_name = rl_config["config_name"]                      # Configuration name used in folder structure
+    if path_additional is None:
+        current_time = datetime.now().strftime(
+            "%Y%m%d-%H%M%S"
+        )  # Current date and time for unique directory names
+        set_current_time(current_time)  # saving to acess from other methods
+        path_additional = current_time
+    config_name = rl_config[
+        "config_name"
+    ]  # Configuration name used in folder structure
 
     # Create directories for logs, checkpoints, and final model TODO: figure out if lightning.logger can be used
-    log_path = f"./logs/{config_name}/rl_model_{current_time}/"
-    checkpoint_path = f"./logs/{config_name}/rl_model_{current_time}/checkpoints/"
-    final_model_path = f"./logs/{config_name}/rl_model_{current_time}/ppo_model/"
+    log_path = f"./logs/{config_name}/rl_model_{path_additional}/"
+    checkpoint_path = f"./logs/{config_name}/rl_model_{path_additional}/checkpoints/"
+    final_model_path = f"./logs/{config_name}/rl_model_{path_additional}/ppo_model/"
 
     os.makedirs(log_path, exist_ok=True)
     os.makedirs(checkpoint_path, exist_ok=True)
@@ -67,20 +81,26 @@ def train_rl_model(
     logger = configure(log_path, ["tensorboard"])
     model.set_logger(logger)
 
+    # ** Configure callbacks **
     # Configure progress bar
     progress_bar = ProgressBar(total_timesteps=total_timesteps, verbose=1)
-
+    # Configure Checkpoints
     checkpoint_callback = CheckpointCallback(
         save_freq=total_timesteps / NUM_SAVES,
         save_path=checkpoint_path,
         name_prefix="checkpoint_model",
     )
-
+    # Call custom callback (24.05-24: saving actions, observations & rewards as npz zip after training
     custom_callback = CustomCallback()
+    # Configure Early stopping callback
+    # Stop training if there is no improvement after more than 3 evaluations
+    stop_train_callback = StopTrainingOnNoModelImprovement(max_no_improvement_evals=3, min_evals=5, verbose=1)
+    eval_callback = EvalCallback(env, eval_freq=1000, callback_after_eval=stop_train_callback, verbose=1)
 
     # Train model
     model.learn(
-        total_timesteps=total_timesteps, callback=[checkpoint_callback, progress_bar, custom_callback]
+        total_timesteps=total_timesteps,
+        callback=[checkpoint_callback, progress_bar, custom_callback, eval_callback],
     )
 
     model.save(final_model_path)
