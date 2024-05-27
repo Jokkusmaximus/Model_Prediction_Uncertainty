@@ -17,7 +17,7 @@ from supplementary.settings import (
     ACTION_SPACE,
     OBSERVATION_SPACE,
 )
-
+from supplementary.tools import clean_nan_entries
 
 class CustomCallback(BaseCallback):
     """
@@ -68,7 +68,6 @@ class CustomCallback(BaseCallback):
                 ceil(rl_config["custom_total_timesteps"] / 2048) * 2048
             )  # assuming the standard 2048 steps per rollout
 
-        self.action_observation_reward = pd.DataFrame()
         self.actions = np.empty(shape=(self.array_size, ACTION_SPACE), dtype=np.ndarray)
         self.observations = np.empty(
             shape=(self.array_size, OBSERVATION_SPACE), dtype=Tensor
@@ -146,6 +145,11 @@ class CustomCallback(BaseCallback):
         """
         # print("training ended.", f"steps: {self.counter}")
         if not self.save_per_rollout:
+
+            # removing NaN entries due to creating to large arrays
+            self.actions = clean_nan_entries(self.actions)
+            self.observations = clean_nan_entries(self.observations)
+
             np.savez_compressed(
                 f"{self.log_path}data.npz",
                 actions=self.actions,

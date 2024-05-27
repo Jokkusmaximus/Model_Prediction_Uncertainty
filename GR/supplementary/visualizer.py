@@ -3,7 +3,7 @@ A collection of functions used for visualizing results
 Created on 29.04.24
 by: jokkus
 """
-
+import os
 import time
 
 import torch
@@ -18,11 +18,11 @@ from stable_baselines3.common.buffers import RolloutBuffer
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
 
-from world_model.model_net import ModelNetwork
+# from world_model.model_net import ModelNetwork
 from supplementary.settings import PROJECT_ENV
 
 
-def visualize_RL():
+def visualize_RL():  # TODO: implement this functionality, TODO2: decide if needed
     # create env
     env = gym.make(PROJECT_ENV, render_mode="human")
 
@@ -65,10 +65,14 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
     TODO    +   make title include PCA
     :param array:
     :param dims:
-    :param save_path:
+    :param save_path: Path to the folder in which the images will be saved
     :param title:
     :return:
     """
+    if save_path == None:
+        print("Please provide a path to save the images")
+        return False
+
     # Preparation for colourmap, simply going from first entry to last entry
     c = np.zeros(len(array))
     for i in range(len(array)):
@@ -142,19 +146,35 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
     plt.show()
 
     if save_path is not None:
+        # Make folder
+        os.makedirs(save_path, exist_ok=True)
         fig.savefig(f"{save_path}PCA_{title}.png", bbox_inches="tight")
-        if full_save:   # save other relevant filetypes
-            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='pdf')
-            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='svg')
+        if full_save:  # save other relevant filetypes
+            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format="pdf")
+            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format="svg")
     pass
 
 
 def visualize_tSNE(
-    array=None, dims=None, save_path=None, title="Plot", time_calculations=True, full_save=False
+    array=None,
+    dims=None,
+    save_path=None,
+    title="Plot",
+    time_calculations=True,
+    full_save=False,
 ):
+    if save_path is None:
+        print("Please provide a path to save the images")
+        return False
     if dims is None:
-        visualize_tSNE(array=array, dims=3, save_path=save_path, title=title, time_calculations=time_calculations)  # 3D
-        dims = 2    # calculate 2D
+        visualize_tSNE(
+            array=array,
+            dims=3,
+            save_path=save_path,
+            title=title,
+            time_calculations=time_calculations,
+        )  # 3D
+        dims = 2  # calculate 2D
 
     # Preparation for colourmap, simply going from first entry to last entry
     c = np.zeros(len(array))
@@ -186,8 +206,11 @@ def visualize_tSNE(
     plt.show()
 
     if save_path is not None:
+        # Make folder
+        os.makedirs(save_path, exist_ok=True)
         fig.savefig(f"{save_path}tSNE_{title}.png", bbox_inches="tight")
-        if full_save:   # save other relevant filetypes
-            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='pdf')
-            fig.savefig(f"{save_path}PCA_{title}", bbox_inches="tight", format='svg')
+        if full_save:  # save other relevant filetypes
+            fig.savefig(f"{save_path}PCA_{title}.pdf", bbox_inches="tight", format="pdf")
+            fig.savefig(f"{save_path}PCA_{title}.svg", bbox_inches="tight", format="svg")
     pass
+

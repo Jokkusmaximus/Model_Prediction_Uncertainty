@@ -110,12 +110,12 @@ def train_rl_model(
     # Call custom callback (24.05-24: saving actions, observations & rewards as npz zip after training
     custom_callback = CustomCallback()
     # Configure Early stopping callback
-    # Stop training if there is no improvement after more than 3 evaluations
+    # Stop training if there is no improvement after more than 15 evaluations
     stop_train_callback = StopTrainingOnNoModelImprovement(
         max_no_improvement_evals=15, min_evals=50, verbose=1
     )
     eval_callback = EvalCallback(
-        env, eval_freq=1024, callback_after_eval=stop_train_callback, verbose=0
+        env, eval_freq=2000, callback_after_eval=stop_train_callback, verbose=0
     )
 
     # Train model

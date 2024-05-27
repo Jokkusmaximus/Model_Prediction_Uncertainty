@@ -14,6 +14,7 @@ N_EPOCHS = 25
 BATCH_SIZE = 256
 SEED = 40
 N_NEURONS_HIDDEN = 256
+LR = 0.001
 
 wm_config = {
     "config_name": "wm_test"
@@ -23,7 +24,7 @@ wm_config = {
 rl_config = {
     "policy_type": "MlpPolicy",
     "config_name": "rl_test",
-    "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000
+    "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000 (seems like it cannot be more than 1000 in env)
     "custom_total_timesteps": 2000000,
     # "learning_rate": 1e-3,
     "model_hyperparams": {},
