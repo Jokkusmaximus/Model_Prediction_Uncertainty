@@ -1,5 +1,9 @@
 # logfiles
 GR/logs/
 
+# cleanRL files
+GR/cleanrl/
+
+
 # idea files
 GR/.idea

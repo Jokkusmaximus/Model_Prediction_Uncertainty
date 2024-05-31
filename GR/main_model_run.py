@@ -9,7 +9,7 @@ import torch
 import gymnasium as gym
 from lightning.pytorch import seed_everything
 
-from rl.train_rl import train_rl_model
+from rl.sb3_agent import train_rl_model
 from supplementary.settings import SEED, PROJECT_ENV
 from supplementary.experiments import ex_different_lr
 
