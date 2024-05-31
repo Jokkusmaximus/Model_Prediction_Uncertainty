@@ -18,10 +18,17 @@ import tyro
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
+from math import ceil
+
+from cleanrl.rpo_continuous_action import make_env
+
+from supplementary.settings import SEED, rl_config, PROJECT_ENV, set_current_time, set_path_addition, get_current_time
+
+
 
 @dataclass
 class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
+    exp_name: str = os.path.basename(__file__)[: -len(".py")]   # TODO: what does this do?
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
@@ -29,7 +36,7 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = False
+    track: bool = False # TODO enable tracking with W&B
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
@@ -39,9 +46,9 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "HalfCheetah-v4"
+    env_id: str = PROJECT_ENV
     """the id of the environment"""
-    total_timesteps: int = 80000
+    total_timesteps: int = rl_config["custom_total_timesteps"]
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -84,26 +91,6 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
-
-def make_env(env_id, idx, capture_video, run_name, gamma):
-    def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-        env = gym.wrappers.FlattenObservation(env)  # deal with dm_control's Dict observation space
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.ClipAction(env)
-        env = gym.wrappers.NormalizeObservation(env)
-        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
-        env = gym.wrappers.NormalizeReward(env, gamma=gamma)
-        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        return env
-
-    return thunk
-
-
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -111,7 +98,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, rpo_alpha):
+    def __init__(self, envs, rpo_alpha, action_logstd=None):
         super().__init__()
         self.rpo_alpha = rpo_alpha
         self.critic = nn.Sequential(
@@ -128,7 +115,13 @@ class Agent(nn.Module):
             nn.Tanh(),
             layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01),
         )
-        self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(envs.single_action_space.shape)))
+        if action_logstd is not None:  # modified to enable custom action_logstd
+            data = np.empty(shape=np.prod(1, envs.single_action_space.shape))
+            data.fill(action_logstd)
+            data = torch.tensor(data)
+        else:
+            data = torch.zeros(1, np.prod(envs.single_action_space.shape))
+        self.actor_logstd = nn.Parameter(data)
 
     def get_value(self, x):
         return self.critic(x)
@@ -149,7 +142,17 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-if __name__ == "__main__":
+def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rollout=False):
+    """
+    TODO: implement env != None
+    TODO: enable logging of actions and observations
+    TODO(optional): make nicer progress_bar
+    :param env:
+    :param action_std:
+    :param path_additional:
+    :return:
+    """
+
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
@@ -167,7 +170,18 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
+
+    # ** Logging setup **
+    config_name = rl_config["config_name"]  # Configuration name used in folder structure
+    current_time = get_current_time()
+    if path_additional is None and current_time == 0:  # no path addition -> current time is path addition
+        current_time = time.time()  # Current date and time for unique directory names
+        set_current_time(current_time)  # saving to access from other methods
+        set_path_addition(current_time)  # saving to access from other methods
+        path_additional = current_time
+
+    logpath = (f"./logs/{config_name}/rl_model_{path_additional}/")
+    writer = SummaryWriter(logpath)  # modified to my schema
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -179,6 +193,7 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
     torch.backends.cudnn.deterministic = args.torch_deterministic
 
+    global device
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
@@ -205,6 +220,12 @@ if __name__ == "__main__":
     next_obs = torch.Tensor(next_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
+
+    # Print at start of training
+    if action_std is not None:
+        print(f"Started training on {args.env_id} at {start_time} with action standard deviation {action_std}")
+    else:
+        print(f"Started training on {args.env_id} at {start_time}")
 
     for update in range(1, num_updates + 1):
         # Annealing the rate if instructed to do so.
@@ -332,6 +353,19 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
+    print(f"obs size : {obs.size()}")
+    print(f"actions size : {actions.size()}")
+    np_observations = torch.Tensor.numpy(obs)
+    np_actions = torch.Tensor.numpy(actions)
+    print(f"obs size : {np_observations.shape}")
+    print(f"actions size : {np_actions.shape}")
+
+    np.savez_compressed(
+        f"{logpath}data.npz",
+        observations=np_observations,
+        actions=np_actions,
+    )
 
     envs.close()
     writer.close()
