@@ -8,13 +8,15 @@ from datetime import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
-from rl import train_rl
+from rl import sb3_agent
 from supplementary.settings import (
     rl_config,
     get_path_addition,
     set_current_time,
     set_path_addition,
 )
+from supplementary.visualizer import visualize_PCA, visualize_tSNE
+from supplementary.tools import clean_nan_entries
 
 
 def ex_different_lr(num_tests=10, env=None, lrs=None):
@@ -51,6 +53,42 @@ def ex_different_lr(num_tests=10, env=None, lrs=None):
         temp_path_additional = f"{current_time}_lr{lr}"
         set_path_addition(temp_path_additional)
         print(f"Training model {i+1} / {num_tests}, Learning rate: {lr}")
-        train_rl.train_rl_model(
+        sb3_agent.train_rl_model(
             learning_rate=lr, env=env, path_additional=temp_path_additional
         )
+
+def visualize_epsilons():
+    # where to save pictures
+    savepath = "logs/rl_test/rl_model_20240524-215058"
+
+    # loading all data
+    filepath_lr1 = f"{savepath}_lr1.0/data.npz"
+    filepath_lr01 = f"{savepath}_lr0.1/data.npz"
+    filepath_lr001 = f"{savepath}_lr0.01/data.npz"
+    filepath_lr0001 = f"{savepath}_lr0.001/data.npz"
+    filepath_lr00001 = f"{savepath}_lr0.0001/data.npz"
+    filepath_lr000001 = f"{savepath}_lr1e-05/data.npz"
+    filepath_lr0000001 = f"{savepath}_lr1e-06/data.npz"
+
+    filepaths = {
+        "1.0": filepath_lr1,
+        "0.1": filepath_lr01,
+        "0.01": filepath_lr001,
+        "0.001": filepath_lr0001,
+        "0.0001": filepath_lr00001,
+        "1e-05": filepath_lr000001,
+        "1e-06": filepath_lr0000001,
+    }
+
+    savepath = f"{savepath}/"  # add a backslash to ensure pictures are added to a folder
+    for key in filepaths.keys():
+        filepath = filepaths[key]
+        print(filepath, key)
+        nparrz = np.load(filepath, allow_pickle=True)
+
+        for name in nparrz.files:
+            array = clean_nan_entries(nparrz[name])  # remove NaN before continuing
+            # try:
+            visualize_tSNE(array, dims=2, save_path=savepath, title=f"{name}_LR:{key}", full_save=False)
+            # except ValueError:
+            #    print(f"The content of nparrz[\"{name}\"], is of wrong shape \n The shape is {nparrz[name].shape}")
