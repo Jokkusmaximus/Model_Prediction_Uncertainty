@@ -5,17 +5,18 @@ by: jokkus
 """
 
 from datetime import datetime
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from rl import sb3_agent
+from rl import cleanrl_agent
 from supplementary.settings import (
     rl_config,
     get_path_addition,
     set_current_time,
     set_path_addition,
 )
-from supplementary.visualizer import visualize_PCA, visualize_tSNE
+# from supplementary.visualizer import visualize_PCA, visualize_tSNE    # TODO: why broken?
 from supplementary.tools import clean_nan_entries
 
 
@@ -56,6 +57,16 @@ def ex_different_lr(num_tests=10, env=None, lrs=None):
         sb3_agent.train_rl_model(
             learning_rate=lr, env=env, path_additional=temp_path_additional
         )
+
+def ex_different_action_logstd():
+    logstds = [10000, 1000, 100, 10, 1, 0.1, 0.01, 0.001, 0.0001]
+    current_time = time.time()
+
+    for i in range(len(logstds)):
+        print(f"Training model {i+1} / {len(logstds)}")
+        path_addtion = f"{current_time}_{logstds[i]}"
+        cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i])
+
 
 def visualize_epsilons():
     # where to save pictures
