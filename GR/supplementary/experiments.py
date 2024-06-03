@@ -16,7 +16,7 @@ from supplementary.settings import (
     set_current_time,
     set_path_addition,
 )
-# from supplementary.visualizer import visualize_PCA, visualize_tSNE    # TODO: why broken?
+from supplementary.visualizer import visualize_PCA, visualize_tSNE
 from supplementary.tools import clean_nan_entries
 
 
@@ -53,53 +53,61 @@ def ex_different_lr(num_tests=10, env=None, lrs=None):
         lr = lrs[i]
         temp_path_additional = f"{current_time}_lr{lr}"
         set_path_addition(temp_path_additional)
-        print(f"Training model {i+1} / {num_tests}, Learning rate: {lr}")
+        print(f"Training model {i + 1} / {num_tests}, Learning rate: {lr}")
         sb3_agent.train_rl_model(
             learning_rate=lr, env=env, path_additional=temp_path_additional
         )
+
 
 def ex_different_action_logstd():
     logstds = [10000, 1000, 100, 10, 1, 0.1, 0.01, 0.001, 0.0001]
     current_time = time.time()
 
     for i in range(len(logstds)):
-        print(f"Training model {i+1} / {len(logstds)}")
+        print(f"Training model {i + 1} / {len(logstds)}")
         path_addtion = f"{current_time}_{logstds[i]}"
         cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i])
 
 
-def visualize_epsilons():
+def visualize_action_logstds():
     # where to save pictures
-    savepath = "logs/rl_test/rl_model_20240524-215058"
+    savepath = "logs/cleanrl_test/rl_model_1717178189.9982533"
 
     # loading all data
-    filepath_lr1 = f"{savepath}_lr1.0/data.npz"
-    filepath_lr01 = f"{savepath}_lr0.1/data.npz"
-    filepath_lr001 = f"{savepath}_lr0.01/data.npz"
-    filepath_lr0001 = f"{savepath}_lr0.001/data.npz"
-    filepath_lr00001 = f"{savepath}_lr0.0001/data.npz"
-    filepath_lr000001 = f"{savepath}_lr1e-05/data.npz"
-    filepath_lr0000001 = f"{savepath}_lr1e-06/data.npz"
+    filepath_01 = f"{savepath}_0.1/"
+    filepath_001 = f"{savepath}_0.01/"
+    filepath_0001 = f"{savepath}_0.001/"
+    filepath_00001 = f"{savepath}_0.0001/"
+    filepath_1 = f"{savepath}_1/"
+    filepath_10 = f"{savepath}_10/"
+    filepath_100 = f"{savepath}_100/"
+    filepath_1000 = f"{savepath}_1000/"
+    filepath_10000 = f"{savepath}_10000/"
 
     filepaths = {
-        "1.0": filepath_lr1,
-        "0.1": filepath_lr01,
-        "0.01": filepath_lr001,
-        "0.001": filepath_lr0001,
-        "0.0001": filepath_lr00001,
-        "1e-05": filepath_lr000001,
-        "1e-06": filepath_lr0000001,
+        "0.0001": filepath_00001,
+        "0.001": filepath_0001,
+        "0.01": filepath_001,
+        "0.1": filepath_01,
+        "1": filepath_1,
+        "10": filepath_10,
+        "100": filepath_100,
+        "1000": filepath_1000,
+        "10000": filepath_10000,
     }
 
     savepath = f"{savepath}/"  # add a backslash to ensure pictures are added to a folder
     for key in filepaths.keys():
         filepath = filepaths[key]
-        print(filepath, key)
-        nparrz = np.load(filepath, allow_pickle=True)
+        print(f"Filepath: {filepath},   Key: {key}")
+        nparrz = np.load(f"{filepath}data.npz", allow_pickle=True)
 
         for name in nparrz.files:
-            array = clean_nan_entries(nparrz[name])  # remove NaN before continuing
+            np_arr = nparrz[name]
+            #array = clean_nan_entries(np_arr)  # remove NaN before continuing
+            np_arr = np.squeeze(np_arr)         # Remove axes of length one from np_arr
             # try:
-            visualize_tSNE(array, dims=2, save_path=savepath, title=f"{name}_LR:{key}", full_save=False)
+            visualize_PCA(np_arr, dims=2, save_path=savepath, title=f"{name}_action_logstd:{key}", full_save=False)
+            # visualize_tSNE(array, dims=2, save_path=savepath, title=f"{name}_LR:{key}", full_save=False)
             # except ValueError:
             #    print(f"The content of nparrz[\"{name}\"], is of wrong shape \n The shape is {nparrz[name].shape}")
