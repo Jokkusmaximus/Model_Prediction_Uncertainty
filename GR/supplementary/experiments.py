@@ -60,7 +60,7 @@ def ex_different_lr(num_tests=10, env=None, lrs=None):
 
 
 def ex_different_action_logstd():
-    logstds = [10000, 1000, 100, 10, 1, 0.1, 0.01, 0.001, 0.0001]
+    logstds = [25, 10, 5, 1, 0.1, 0.01, 0.001, 0.0001]  # Viable range found: max 25(50->ERROR), min 0.0001
     current_time = time.time()
 
     for i in range(len(logstds)):
