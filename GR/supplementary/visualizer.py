@@ -69,9 +69,9 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
     :param title:
     :return:
     """
+
     if save_path == None:
-        print("Please provide a path to save the images")
-        return False
+        print("save_path empty, no plots will be saved")
 
     # Preparation for colourmap, simply going from first entry to last entry
     c = np.zeros(len(array))
@@ -146,6 +146,7 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
     plt.show()
 
     if save_path is not None:
+        save_path = f"{save_path}_plots"
         # Make folder
         os.makedirs(save_path, exist_ok=True)
         fig.savefig(f"{save_path}PCA_{title}.png", bbox_inches="tight")
@@ -206,6 +207,7 @@ def visualize_tSNE(
     plt.show()
 
     if save_path is not None:
+        save_path = f"{save_path}_plots"
         # Make folder
         os.makedirs(save_path, exist_ok=True)
         fig.savefig(f"{save_path}tSNE_{title}.png", bbox_inches="tight")
