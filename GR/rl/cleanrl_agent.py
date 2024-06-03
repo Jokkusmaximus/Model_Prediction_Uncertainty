@@ -116,11 +116,12 @@ class Agent(nn.Module):
             layer_init(nn.Linear(64, np.prod(envs.single_action_space.shape)), std=0.01),
         )
         if action_logstd is not None:  # modified to enable custom action_logstd
-            data = np.empty(shape=np.prod(1, envs.single_action_space.shape))
+            data = np.empty((1, np.prod(envs.single_action_space.shape)))
             data.fill(action_logstd)
             data = torch.tensor(data)
         else:
             data = torch.zeros(1, np.prod(envs.single_action_space.shape))
+        print(f"Data: {data}", "*****"*10, f"action_logstd: {action_logstd}", "*****"*10)
         self.actor_logstd = nn.Parameter(data)
 
     def get_value(self, x):
@@ -202,7 +203,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
     )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs, args.rpo_alpha).to(device)
+    agent = Agent(envs, args.rpo_alpha, action_std).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -212,6 +213,10 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+
+    # ** Own storage setup **
+    np_observations = np.zeros(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
+    np_actions = np.zeros(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
 
     # TRY NOT TO MODIFY: start the game
     global_step = 0
@@ -354,11 +359,23 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
+        # collect actions & observations for space exploration
+        print(np.squeeze(torch.Tensor.numpy(obs)).shape)
+        np_observations[update] = np.squeeze(torch.Tensor.numpy(obs))
+        np_actions[update] = np.squeeze(torch.Tensor.numpy(actions))
+        print(f"observation shape: {np_observations.shape}, action shape : {np_actions.shape}")
+        print(f"update: observation shape: {np_observations[update].shape}, action shape : {np_actions[update].shape}")
+
+
+
     print(f"obs size : {obs.size()}")
     print(f"actions size : {actions.size()}")
-    np_observations = torch.Tensor.numpy(obs)
-    np_actions = torch.Tensor.numpy(actions)
+    np_obs = torch.Tensor.numpy(obs)
+    np_act = torch.Tensor.numpy(actions)
     print(f"obs size : {np_observations.shape}")
+    print(f"act size : {np_actions.shape}")
+
+    print(f"observations size : {np_observations.shape}")
     print(f"actions size : {np_actions.shape}")
 
     np.savez_compressed(
