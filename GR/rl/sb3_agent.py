@@ -19,7 +19,7 @@ from stable_baselines3.common.callbacks import (
     StopTrainingOnNoModelImprovement,
     EvalCallback,
 )
-from lightning.pytorch.loggers import TensorBoardLogger
+# from lightning.pytorch.loggers import TensorBoardLogger
 
 # Imports from own config files
 from supplementary.settings import (

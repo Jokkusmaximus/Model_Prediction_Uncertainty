@@ -121,7 +121,7 @@ class Agent(nn.Module):
             data = torch.tensor(data)
         else:
             data = torch.zeros(1, np.prod(envs.single_action_space.shape))
-        print(f"Data: {data}", "*****"*10, f"action_logstd: {action_logstd}", "*****"*10)
+        # print(f"Data: {data}", "*****", f"action_logstd: {action_logstd}", "*****")
         self.actor_logstd = nn.Parameter(data)
 
     def get_value(self, x):
@@ -145,6 +145,7 @@ class Agent(nn.Module):
 
 def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rollout=False):
     """
+    TODO: remove redundant "0" at place 0 of actions and observations being saved
     TODO: implement env != None
     TODO: enable logging of actions and observations
     TODO(optional): make nicer progress_bar
@@ -215,8 +216,8 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     # ** Own storage setup **
-    np_observations = np.zeros(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
-    np_actions = np.zeros(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
+    np_observations = np.empty(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
+    np_actions = np.empty(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
 
     # TRY NOT TO MODIFY: start the game
     global_step = 0
@@ -359,24 +360,18 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        # collect actions & observations for space exploration
-        print(np.squeeze(torch.Tensor.numpy(obs)).shape)
-        np_observations[update] = np.squeeze(torch.Tensor.numpy(obs))
+        # log actions & observations for space exploration
+        obs_arr =  np.squeeze(torch.Tensor.numpy(obs))
+        np_observations[update] = obs_arr
         np_actions[update] = np.squeeze(torch.Tensor.numpy(actions))
-        print(f"observation shape: {np_observations.shape}, action shape : {np_actions.shape}")
-        print(f"update: observation shape: {np_observations[update].shape}, action shape : {np_actions[update].shape}")
+        # print(f"Update: {update}, current obs arr: {obs_arr}")
 
-
-
-    print(f"obs size : {obs.size()}")
-    print(f"actions size : {actions.size()}")
-    np_obs = torch.Tensor.numpy(obs)
-    np_act = torch.Tensor.numpy(actions)
-    print(f"obs size : {np_observations.shape}")
-    print(f"act size : {np_actions.shape}")
-
+    print("#####"*5)
+    print(f"mean SPS over {args.total_timesteps} timesteps: {int(args.total_timesteps / (time.time() - start_time))}")
+    print(f"Total time: {time.time() - start_time}")
     print(f"observations size : {np_observations.shape}")
     print(f"actions size : {np_actions.shape}")
+    print("#####"*5)
 
     np.savez_compressed(
         f"{logpath}data.npz",
