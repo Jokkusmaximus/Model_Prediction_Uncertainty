@@ -216,8 +216,8 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
     # ** Own storage setup **
-    np_observations = np.empty(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
-    np_actions = np.empty(shape=(1 + args.total_timesteps // args.batch_size), dtype=np.ndarray)
+    np_observations = np.empty(shape=(args.total_timesteps // args.batch_size), dtype=np.ndarray)
+    np_actions = np.empty(shape=(args.total_timesteps // args.batch_size), dtype=np.ndarray)
 
     # TRY NOT TO MODIFY: start the game
     global_step = 0
@@ -361,18 +361,18 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
         # log actions & observations for space exploration
-        obs_arr =  np.squeeze(torch.Tensor.numpy(obs))
-        np_observations[update] = obs_arr
-        np_actions[update] = np.squeeze(torch.Tensor.numpy(actions))
+        np_observations[update-1] = np.squeeze(torch.Tensor.numpy(obs))
+        np_actions[update - 1] = np.squeeze(torch.Tensor.numpy(actions))
         # print(f"Update: {update}, current obs arr: {obs_arr}")
 
+    # ** Prints information **
     print("#####"*5)
-    print(f"mean SPS over {args.total_timesteps} timesteps: {int(args.total_timesteps / (time.time() - start_time))}")
     print(f"Total time: {time.time() - start_time}")
-    print(f"observations size : {np_observations.shape}")
-    print(f"actions size : {np_actions.shape}")
+    print(f"mean SPS over {args.total_timesteps} timesteps: {int(args.total_timesteps / (time.time() - start_time))}")
+    print(f"observations size : {np_observations.shape}, actions size : {np_actions.shape}")
     print("#####"*5)
 
+    # ** Saving the numpy arrays, as a compressed npz file **
     np.savez_compressed(
         f"{logpath}data.npz",
         observations=np_observations,
