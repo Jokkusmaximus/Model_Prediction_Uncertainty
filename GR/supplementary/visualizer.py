@@ -60,14 +60,108 @@ def visualize_RL():  # TODO: implement this functionality, TODO2: decide if need
     # env.close()
 
 
+def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=False, custom_scaling=None, verbose=True):
+    # TODO make both PCA & tSNE available, combine PCA & tSNE if too large
+    # TODO set axis scaling (logarithmic / Asinh), aut detect points outside scaling, and generate addition plot fitting
+    # TODO implement verbose
+
+    # *** Handling information not provided ***
+    if array is None:
+        print("No array provided")
+        return False
+
+    array_size_lim = 100000             # current limit is 100.000, since it took long to calculate tSNE for larger
+    array_size = array.shape[0]
+    if array_size >= array_size_lim:
+        print(f"Array size is larger than {array_size_lim}, PCA will be used before tSNE")
+        # TODO implement
+        #  set variables to activate this, decide which values to use
+
+    if dims is None:
+        dims = [2]
+        print(f"dims not provided, automatically set to {dims[0]}")
+    elif dims is int:
+        dims = [dims]  # converting to list
+    else:
+        print(
+            f"Datatype of \'dims\' is not compatible, should be \'int\' or \'tuple of ints\', "
+            f"but {type(dims)} was provided")
+
+    if save_path is None:
+        print("save_path empty, no plots will be saved")
+
+    if full_save is False:
+        print(f"full_save not selected, only .png file will be saved")
+
+    if custom_scaling is None or custom_scaling is False:
+        print(f"custom_scaling not provided, automatic scaling will be applied")
+
+    # *** Pyplot setup ***
+    # * Colour-map initialization * Indexing based on age of inputs
+    c = np.zeros(len(array))
+    for i in range(len(array)):
+        c[i] = i
+
+    # * Fig setup *
+    fig, axs = plt.subplots(ncols=2) #, sharex=True, sharey=True
+    fig.suptitle(title)
+    #ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], autoscale_on=True)
+
+    # Changing scaling dependent on whether it is actions or observations
+    # TODO: reimplement but make dynamic to size, just keep equal for all created
+    # if custom_scaling == "actions":
+    #     ax.set_autoscale_on(False)
+    #     ax.set_xlim((-10, 10))
+    #     ax.set_ylim((-10, 10))
+    # elif custom_scaling == "observations":
+    #     ax.set_autoscale_on(False)
+    #     ax.set_xlim((-30, 30))
+    #     ax.set_ylim((-30, 30))
+
+    for dim in dims:
+        if dim == 1 or dim == 2 or dim == 3:
+            # Conducting the principal components analysis
+            pca = PCA(n_components=dim)
+            pc_result = pca.fit_transform(array)
+
+            ax = axs[0]
+            ax.set(adjustable='box', aspect='equal')
+            ax.set_title("PCA")
+            ax.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
+
+            # Conducting the t-distributed stochastic neighbor embedding
+            tsne = TSNE(n_components=dim, verbose=1, perplexity=40, n_iter=300)
+            tsne_results = tsne.fit_transform(array)
+
+            ax = axs[1]
+            ax.set(adjustable='box', aspect='equal')
+            ax.set_title("tSNE")
+            mappable = ax.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
+
+            # TODO
+            #  full save
+            #  Calculate PCA before tSNE
+            # TODO detect if ax.dataLim > x/ylim, and generate new plot
+            cbar = fig.colorbar(mappable, ax=axs, shrink=.7)
+            cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])     # TODO: make ticks not hard-coded
+            plt.show()
+
+            fig.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
+            pass
+        else:
+            print(f"Dimension provided is not humanly understandable, dimension is {dim}")
+    pass
+
+
 def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save=False):
     """
-    TODO    +   make title include PCA
-    :param array:
-    :param dims:
+    Method to visualize an array using PCA downsampling
+    :param array: The array with data to be downsampled & visualized
+    :param dims: Dimensionality of output. eithr 2D or 3D
     :param save_path: Path to the folder in which the images will be saved
-    :param title:
-    :return:
+    :param title: Title of the plot
+    :param full_save: Boolean determining if the plot should be saved using several filetypes
+    :return: None
     """
 
     if save_path == None:
@@ -157,13 +251,23 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
 
 
 def visualize_tSNE(
-    array=None,
-    dims=None,
-    save_path=None,
-    title="Plot",
-    time_calculations=True,
-    full_save=False,
+        array=None,
+        dims=None,
+        save_path=None,
+        title="Plot",
+        time_calculations=True,
+        full_save=False,
 ):
+    """
+    Method to visualize an array using PCA downsampling
+    :param array: The array with data to be downsampled & visualized
+    :param dims: Dimensionality of output. eithr 2D or 3D
+    :param save_path: Path to the folder in which the images will be saved
+    :param title: Title of the plot
+    :param time_calculations: Boolean determining if the calculations should be timed
+    :param full_save: Boolean determining if the plot should be saved using several filetypes
+    :return: None
+    """
     if save_path is None:
         print("Please provide a path to save the images")
         return False
@@ -207,7 +311,7 @@ def visualize_tSNE(
     plt.show()
 
     if save_path is not None:
-        save_path = f"{save_path}_plots"
+        save_path = f"{save_path}"
         # Make folder
         os.makedirs(save_path, exist_ok=True)
         fig.savefig(f"{save_path}tSNE_{title}.png", bbox_inches="tight")
@@ -215,4 +319,3 @@ def visualize_tSNE(
             fig.savefig(f"{save_path}PCA_{title}.pdf", bbox_inches="tight", format="pdf")
             fig.savefig(f"{save_path}PCA_{title}.svg", bbox_inches="tight", format="svg")
     pass
-
