@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 import pandas as pd
-from math import floor
+from math import floor, ceil
 
 from supplementary.visualizer import visualize_PCA, visualize_tSNE, create_plots
 
@@ -18,16 +18,18 @@ def clean_nan_entries(array, verbose=False):
     :return: array without NaN values
     """
     nan_arr = pd.isna(array)
-    cleaned_arr = np.delete(array, nan_arr[:, 0], 0)
+    cleaned_arr = np.delete(array, nan_arr, 0)
 
     if verbose:
         print(f"Removed {len(array) - len(cleaned_arr)} NaN values, {len(cleaned_arr)} entries remaining")
     return cleaned_arr
 
-def visualize_action_logstds(divisions=10):
+
+def visualize_action_logstds(times_sliced=10):
     """
     Method to load and divide data, before passing it to the visualizers(make plots)
-    TODO plot per episode / plot several episodes with different colour per episode
+    TODO plot several rollouts with different colour per rollout
+    TODO dynamically set x_lim & y_lim to be equal throughout plot_generation
     TODO dynamically get all folders trained at a certain time? without manually declaring suffixes
     :return:
     """
@@ -56,9 +58,12 @@ def visualize_action_logstds(divisions=10):
     # }
 
     # savepath = "logs/cleanrl_test/rl_model_1717487739.4952843_0.01"
-    savepath = "logs/cleanrl_test/rl_model_1717420347.3728597_1"
+    # savepath = "logs/cleanrl_test/rl_model_1717587951.3226361"
+    # savepath = "logs/cleanrl_test/rl_model_1717420347.3728597_1"
     # savepath = "logs/cleanrl_test/rl_model_1717421859.5474908_0.01"
     # savepath = "logs/cleanrl_test/rl_model_1717421859.5474908_0.0001"
+    # savepath = "logs/cleanrl_test/rl_model_1717582485.8645725_0.01"
+    savepath = "logs/cleanrl_test/rl_model_1718183744.2232614_0.01"
     filepaths = {
         "0.01": f"{savepath}/",
     }
@@ -74,30 +79,71 @@ def visualize_action_logstds(divisions=10):
         for name in nparrz.files:
             np_arr = nparrz[name]
 
-            print(f"removing: {np_arr[0]}")
-            np_arr = np.delete(np_arr, 0, 0)        # TODO: remove when not needed or make dynamic(best would be make array in cleanrl_agent, np.empty
-
+            # array cleaning
+            np_arr = clean_nan_entries(np_arr)  # remove NaN entries
             np_arr = np.vstack(np_arr)
-
-            # array = clean_nan_entries(np_arr)  # remove NaN before continuing
-            np_arr = np.squeeze(np_arr)         # Remove axes of length one from np_arr
+            np_arr = np.squeeze(np_arr)  # Remove axes of length one from np_arr
 
             start_time = time.time()
-            times_divided = 10
-            slice_size = floor(np_arr.shape[0]/times_divided)
-            for i in range(times_divided):
-                temp_array = np_arr[i*slice_size:(i+1)*slice_size]
+            slice_size = floor(np_arr.shape[0] / times_sliced)
+            for i in range(times_sliced):
+                temp_array = np_arr[i * slice_size:(i + 1) * slice_size]
                 create_plots(temp_array, title=f"{name}_action_logstd:{key}_{i}", custom_scaling=name)
-                # visualize_PCA(temp_array, dims=2, save_path=savepath, title=f"{name}_action_logstd:{key}_{i}", full_save=False)
-                # visualize_tSNE(temp_array, dims=2, save_path=savepath, title=f"{name}_action_logstd:{key}_i", full_save=False)
-                print(f"Time spent on calculating division {i}: {time.time()-start_time}, with size {slice_size}")
+                print(f"Time spent on calculating division {i}: {time.time() - start_time}, with size {slice_size}")
                 start_time = time.time()
 
-            # try:
-            # except ValueError:
-            #    print(f"The content of nparrz[\"{name}\"], is of wrong shape \n The shape is {nparrz[name].shape}")
+            # visualize_PCA(temp_array, dims=2, title=f"{name}_action_logstd:{key}_{i}", full_save=False)
 
 
-def visualize_episodes():
-    # TODO visualize per episode, either all episodes in one large figure, or several episodes in 1 plot different color
-    pass
+def visualize_per_rollout(lim_create_plots=np.inf):
+    """
+
+    :param lim_create_plots: TODO: BUG: creates one plot more than the limit
+    :return:
+    """
+    # TODO: create plots between rollout x and y. e.g. final 25 rollouts
+    # TODO: figure out if the plots are made exactly per rollout, could be shifted due to rounding error.
+    savepath = "logs/cleanrl_test/rl_model_1718183744.2232614_0.01/"
+    nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
+    # nparrz = np.load("logs/cleanrl_test/rl_model_1718200844.9319282/data.npz", allow_pickle=True)
+
+    for name in nparrz.files:
+        np_arr = nparrz[name]
+
+        # array cleaning
+        np_arr = clean_nan_entries(np_arr)  # remove NaN entries
+        np_arr = np.vstack(np_arr)
+        np_arr = np.squeeze(np_arr)  # Remove axes of length one from np_arr
+
+        print(name, np_arr.shape)
+
+        slice_size = 2048
+        num_rollouts = floor(np_arr.shape[0] / slice_size)
+        # mean = np.empty(shape=(num_rollouts, np_arr.shape[1]))
+        # print(floor(np_arr.shape[0] / slice_size))
+        if lim_create_plots >= num_rollouts:
+            for i in range(num_rollouts):
+                temp_arr = np_arr[i * slice_size:(i + 1) * slice_size]
+                # print(f"mean: {temp_arr.mean(axis=0)}")
+                # print(f"std: {temp_arr.std(axis=0)}")
+                # print(f"var: {temp_arr.var(axis=0)}")
+                create_plots(temp_arr, title=f"{name}_rollout:{i}", save_path=savepath)
+
+        elif isinstance(lim_create_plots, int):
+            slice_jump = ceil(
+                num_rollouts / lim_create_plots)  # Space between rollouts which are used to create plots
+            print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}, slice_jump:{slice_jump}",
+                  "*****" * 100)
+            for i in range(lim_create_plots):  # Here "lim_create_plots" should be an int
+
+                # Creating all plots between 0 & lim_create_plots-1
+                temp_arr = np_arr[i * slice_jump * slice_size: ((i * slice_jump) + 1) * slice_size]
+                create_plots(temp_arr, title=f"{name}_rollout:{i * slice_jump}", save_path=savepath)
+
+                # print(f"array size: {len(temp_arr)}")
+            # Create plot of final rollout
+            temp_arr = np_arr[(num_rollouts - 1 )* slice_size: num_rollouts * slice_size]
+            create_plots(temp_arr, title=f"{name}_rollout:{num_rollouts - 1}", save_path=savepath)
+            # print(f"array size: {len(temp_arr)}", "::", f"{(num_rollouts - 1) * slice_size}: {num_rollouts * slice_size} : full size {len(np_arr)}")
+        else:
+            print(f"is \"lim_create_plots\" set, but not an int? type: {type(lim_create_plots)}")
