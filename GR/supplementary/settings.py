@@ -37,11 +37,11 @@ path_addition = ""
 
 NUM_SAVES = 10
 
-
+# ** getters & setters **
 def set_current_time(datetime):
     global current_time
     current_time = datetime
-    print(f"Time at training start is {current_time}")
+    print(f"Current time set to: {current_time}")
 
 
 def get_current_time():
