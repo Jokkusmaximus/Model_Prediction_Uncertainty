@@ -60,7 +60,8 @@ def visualize_RL():  # TODO: implement this functionality, TODO2: decide if need
     # env.close()
 
 
-def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=False, custom_scaling=None, verbose=True):
+def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=False, custom_scaling=None,
+                 additional_info=True):
     # TODO make both PCA & tSNE available, combine PCA & tSNE if too large
     # TODO set axis scaling (logarithmic / Asinh), aut detect points outside scaling, and generate addition plot fitting
     # TODO implement verbose
@@ -70,7 +71,7 @@ def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=
         print("No array provided")
         return False
 
-    array_size_lim = 100000             # current limit is 100.000, since it took long to calculate tSNE for larger
+    array_size_lim = 100000  # current limit is 100.000, since it took long to calculate tSNE for larger
     array_size = array.shape[0]
     if array_size >= array_size_lim:
         print(f"Array size is larger than {array_size_lim}, PCA will be used before tSNE")
@@ -103,9 +104,10 @@ def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=
         c[i] = i
 
     # * Fig setup *
-    fig, axs = plt.subplots(ncols=2) #, sharex=True, sharey=True
+    # fig, axs = plt.subplots(ncols=2, nrows=2) #, sharex=True, sharey=True
+    fig = plt.figure(figsize=(10, 7))
     fig.suptitle(title)
-    #ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], autoscale_on=True)
+    # ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], autoscale_on=True)
 
     # Changing scaling dependent on whether it is actions or observations
     # TODO: reimplement but make dynamic to size, just keep equal for all created
@@ -124,26 +126,37 @@ def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=
             pca = PCA(n_components=dim)
             pc_result = pca.fit_transform(array)
 
-            ax = axs[0]
-            ax.set(adjustable='box', aspect='equal')
-            ax.set_title("PCA")
-            ax.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
+            ax_l = fig.add_subplot(1, 2, 1)
+            ax_l.set(adjustable='box', aspect='equal')
+            ax_l.set_title("PCA")
+            ax_l.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
 
             # Conducting the t-distributed stochastic neighbor embedding
-            tsne = TSNE(n_components=dim, verbose=1, perplexity=40, n_iter=300)
+            tsne = TSNE(n_components=dim, verbose=0, perplexity=40, n_iter=300)
             tsne_results = tsne.fit_transform(array)
 
-            ax = axs[1]
-            ax.set(adjustable='box', aspect='equal')
-            ax.set_title("tSNE")
-            mappable = ax.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
+            ax_r = fig.add_subplot(1, 2, 2)
+            ax_r.set(adjustable='box', aspect='equal')
+            ax_r.set_title("tSNE")
+            mappable = ax_r.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
 
             # TODO
             #  full save
             #  Calculate PCA before tSNE
             # TODO detect if ax.dataLim > x/ylim, and generate new plot
-            cbar = fig.colorbar(mappable, ax=axs, shrink=.7)
-            cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])     # TODO: make ticks not hard-coded
+
+            # Colorbar set-up
+            cbar = fig.colorbar(mappable, ax=[ax_l, ax_r], shrink=1, anchor=(0.95, 0))
+            cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])  # TODO: make ticks not hard-coded
+
+            # Additional_info set-up
+            if additional_info:
+                # ax_text = fig.add_subplot(2, 1, 3)
+                fig.text(0.05, 0.1, f"Mean:{array.mean():.8f}  std:{array.std():.8f}  Var:{array.var():.8f}",
+                         fontsize=15)
+
+            fig.subplots_adjust(bottom=0.15, top=0.9, left=0.1, right=0.8)
+
             plt.show()
 
             fig.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
@@ -164,7 +177,7 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
     :return: None
     """
 
-    if save_path == None:
+    if save_path is None:
         print("save_path empty, no plots will be saved")
 
     # Preparation for colourmap, simply going from first entry to last entry

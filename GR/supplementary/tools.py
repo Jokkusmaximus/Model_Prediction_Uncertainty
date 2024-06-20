@@ -104,8 +104,9 @@ def visualize_per_rollout(lim_create_plots=np.inf):
     # TODO: create plots between rollout x and y. e.g. final 25 rollouts
     # TODO: figure out if the plots are made exactly per rollout, could be shifted due to rounding error.
     savepath = "logs/cleanrl_test/rl_model_1718183744.2232614_0.01/"
-    nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
+    # nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
     # nparrz = np.load("logs/cleanrl_test/rl_model_1718200844.9319282/data.npz", allow_pickle=True)
+    nparrz = np.load("logs/cleanrl_test/rl_model_1718876308.8511665_0.01/data.npz", allow_pickle=True)
 
     for name in nparrz.files:
         np_arr = nparrz[name]
@@ -123,18 +124,24 @@ def visualize_per_rollout(lim_create_plots=np.inf):
         # print(floor(np_arr.shape[0] / slice_size))
         if lim_create_plots >= num_rollouts:
             for i in range(num_rollouts):
+                print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}",
+                      "*****" * 100)
                 temp_arr = np_arr[i * slice_size:(i + 1) * slice_size]
+                print(temp_arr)
                 # print(f"mean: {temp_arr.mean(axis=0)}")
                 # print(f"std: {temp_arr.std(axis=0)}")
                 # print(f"var: {temp_arr.var(axis=0)}")
-                create_plots(temp_arr, title=f"{name}_rollout:{i}", save_path=savepath)
+                print(f"Mean:{temp_arr.mean():.8f}  std:{temp_arr.std():.8f}  Var:{temp_arr.var():.8f}")
+                np.set_printoptions(precision=8)
+                print(f"Mean:{temp_arr.mean(axis=0)}  std:{temp_arr.std(axis=0)}  Var:{temp_arr.var(axis=0)}")
+                # # create_plots(temp_arr, title=f"{name}_rollout:{i}", save_path=savepath)
 
         elif isinstance(lim_create_plots, int):
             slice_jump = ceil(
                 num_rollouts / lim_create_plots)  # Space between rollouts which are used to create plots
             print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}, slice_jump:{slice_jump}",
                   "*****" * 100)
-            for i in range(lim_create_plots):  # Here "lim_create_plots" should be an int
+            for i in range(lim_create_plots):  # Here "lim_create_plots" should be an int   # TODO shoulnd this be num_rollouts?
 
                 # Creating all plots between 0 & lim_create_plots-1
                 temp_arr = np_arr[i * slice_jump * slice_size: ((i * slice_jump) + 1) * slice_size]
@@ -143,6 +150,7 @@ def visualize_per_rollout(lim_create_plots=np.inf):
                 # print(f"array size: {len(temp_arr)}")
             # Create plot of final rollout
             temp_arr = np_arr[(num_rollouts - 1 )* slice_size: num_rollouts * slice_size]
+            print(f"Mean:{temp_arr.mean():.8f}  std:{temp_arr.std():.8f}  Var:{temp_arr.var():.8f}")
             create_plots(temp_arr, title=f"{name}_rollout:{num_rollouts - 1}", save_path=savepath)
             # print(f"array size: {len(temp_arr)}", "::", f"{(num_rollouts - 1) * slice_size}: {num_rollouts * slice_size} : full size {len(np_arr)}")
         else:
