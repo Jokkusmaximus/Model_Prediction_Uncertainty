@@ -25,10 +25,9 @@ from cleanrl.rpo_continuous_action import make_env
 from supplementary.settings import SEED, rl_config, PROJECT_ENV, set_current_time, set_path_addition, get_current_time
 
 
-
 @dataclass
 class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]   # TODO: what does this do?
+    exp_name: str = os.path.basename(__file__)[: -len(".py")]  # TODO: what does this do?
     """the name of this experiment"""
     seed: int = 1
     """seed of the experiment"""
@@ -36,7 +35,7 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = False # TODO enable tracking with W&B
+    track: bool = False  # TODO enable tracking with W&B
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
@@ -91,6 +90,7 @@ class Args:
     num_iterations: int = 0
     """the number of iterations (computed in runtime)"""
 
+
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -143,7 +143,7 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rollout=False):
+def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True, save_array_per_rollout=False):
     """
     TODO: remove redundant "0" at place 0 of actions and observations being saved
     TODO: implement env != None
@@ -228,10 +228,11 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
     num_updates = args.total_timesteps // args.batch_size
 
     # Print at start of training
-    if action_std is not None:
-        print(f"Started training on {args.env_id} at {start_time} with action standard deviation {action_std}")
-    else:
-        print(f"Started training on {args.env_id} at {start_time}")
+    if verbose:
+        if action_std is not None:
+            print(f"Started training on {args.env_id} at {start_time} with action standard deviation {action_std}")
+        else:
+            print(f"Started training on {args.env_id} at {start_time}")
 
     for update in range(1, num_updates + 1):
         # Annealing the rate if instructed to do so.
@@ -261,7 +262,8 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                        if verbose:
+                            print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
@@ -357,20 +359,35 @@ def train_rl_model(env=None, action_std=None, path_additional=None, save_per_rol
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
+        if verbose:
+            print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        # log actions & observations for space exploration
-        np_observations[update-1] = np.squeeze(torch.Tensor.numpy(obs))
-        np_actions[update - 1] = np.squeeze(torch.Tensor.numpy(actions))
-        # print(f"Update: {update}, current obs arr: {obs_arr}")
+        # *** log actions & observations for space exploration
+        # temp np arrays of tensors
+        temp_obs = np.squeeze(torch.Tensor.numpy(obs))
+        temp_actions = np.squeeze(torch.Tensor.numpy(actions))
+        # temp np arrays for saving of copied arrays
+        copy_obs = np.empty(shape=np.shape(temp_obs))
+        copy_action = np.empty(shape=np.shape(temp_actions))
+        np.copyto(copy_obs, temp_obs)
+        np.copyto(copy_action, temp_actions)
+        np_observations[update - 1] = copy_obs
+        np_actions[update - 1] = copy_action
+        # print(
+        #     f"Update: {update}, current obs tensor: {np.squeeze(torch.Tensor.numpy(obs))}, "
+        #     f"current act tensor: {np.squeeze(torch.Tensor.numpy(actions))}")
+        print(np_observations)
+        print(np_actions)
 
     # ** Prints information **
-    print("#####"*5)
-    print(f"Total time: {time.time() - start_time}")
-    print(f"mean SPS over {args.total_timesteps} timesteps: {int(args.total_timesteps / (time.time() - start_time))}")
-    print(f"observations size : {np_observations.shape}, actions size : {np_actions.shape}")
-    print("#####"*5)
+    if verbose:
+        print("#####" * 5)
+        print(f"Total time: {time.time() - start_time}")
+        print(
+            f"mean SPS over {args.total_timesteps} timesteps: {int(args.total_timesteps / (time.time() - start_time))}")
+        print(f"observations size : {np_observations.shape}, actions size : {np_actions.shape}")
+        print("#####" * 5)
 
     # ** Saving the numpy arrays, as a compressed npz file **
     np.savez_compressed(
