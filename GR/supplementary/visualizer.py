@@ -17,6 +17,7 @@ from stable_baselines3.common.buffers import RolloutBuffer
 
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
+from matplotlib.gridspec import GridSpec
 
 # from world_model.model_net import ModelNetwork
 from supplementary.settings import PROJECT_ENV
@@ -60,7 +61,7 @@ def visualize_RL():  # TODO: implement this functionality, TODO2: decide if need
     # env.close()
 
 
-def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=False, custom_scaling=None,
+def create_plots(array=None, title="plot", save_path=None, full_save=False, xy_lims_pca=None, xy_lims_tsne=None,
                  additional_info=True):
     # TODO make both PCA & tSNE available, combine PCA & tSNE if too large
     # TODO set axis scaling (logarithmic / Asinh), aut detect points outside scaling, and generate addition plot fitting
@@ -78,15 +79,16 @@ def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=
         # TODO implement
         #  set variables to activate this, decide which values to use
 
-    if dims is None:
-        dims = [2]
-        print(f"dims not provided, automatically set to {dims[0]}")
-    elif dims is int:
-        dims = [dims]  # converting to list
-    else:
-        print(
-            f"Datatype of \'dims\' is not compatible, should be \'int\' or \'tuple of ints\', "
-            f"but {type(dims)} was provided")
+    # if dims is None:  # TODO decide if 3D is useful
+    #     dims = [2]
+    #     print(f"dims not provided, automatically set to {dims[0]}")
+    # elif dims is int:
+    #     dims = [dims]  # converting to list
+    # else:
+    #     print(
+    #         f"Datatype of \'dims\' is not compatible, should be \'int\' or \'tuple of ints\', "
+    #         f"but {type(dims)} was provided")
+    dim = 2
 
     if save_path is None:
         print("save_path empty, no plots will be saved")
@@ -94,8 +96,9 @@ def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=
     if full_save is False:
         print(f"full_save not selected, only .png file will be saved")
 
-    if custom_scaling is None or custom_scaling is False:
-        print(f"custom_scaling not provided, automatic scaling will be applied")
+    ax_PCA_xlim, ax_PCA_ylim = xy_lims_pca
+    ax_tSNE_xlim, ax_tSNE_ylim = xy_lims_tsne
+    xy_axis_scaler = 1.2
 
     # *** Pyplot setup ***
     # * Colour-map initialization * Indexing based on age of inputs
@@ -105,65 +108,72 @@ def create_plots(array=None, dims=None, title="plot", save_path=None, full_save=
 
     # * Fig setup *
     # fig, axs = plt.subplots(ncols=2, nrows=2) #, sharex=True, sharey=True
-    fig = plt.figure(figsize=(10, 7))
+    fig = plt.figure(figsize=(10, 7), constrained_layout=True)
     fig.suptitle(title)
-    # ax = fig.add_axes([0.1, 0.1, 0.8, 0.8], autoscale_on=True)
+    widths = [1, 1]
+    heights = [1, 1]
+    gs = GridSpec(2, 2, figure=fig, width_ratios=widths, height_ratios=heights)
+    gs.tight_layout(fig, rect=2)
 
-    # Changing scaling dependent on whether it is actions or observations
-    # TODO: reimplement but make dynamic to size, just keep equal for all created
-    # if custom_scaling == "actions":
-    #     ax.set_autoscale_on(False)
-    #     ax.set_xlim((-10, 10))
-    #     ax.set_ylim((-10, 10))
-    # elif custom_scaling == "observations":
-    #     ax.set_autoscale_on(False)
-    #     ax.set_xlim((-30, 30))
-    #     ax.set_ylim((-30, 30))
+    # Conducting the principal components analysis
+    pca = PCA(n_components=dim)
+    pc_result = pca.fit_transform(array)
+    # adjusted x&y lims
+    ax_PCA_adj = fig.add_subplot(gs[0, 0])
+    ax_PCA_adj.set(adjustable='box', aspect='equal')
+    ax_PCA_adj.set_title("PCA")
+    ax_PCA_adj.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
+    if ax_PCA_xlim is None and ax_PCA_ylim is None:
+        ax_PCA_xlim = [i * xy_axis_scaler for i in ax_PCA_adj.get_xlim()]
+        ax_PCA_ylim = [i * xy_axis_scaler for i in ax_PCA_adj.get_ylim()]
+    ax_PCA_adj.set_xlim(ax_PCA_xlim)
+    ax_PCA_adj.set_ylim(ax_PCA_ylim)
+    # automatic x&y lims
+    ax_PCA = fig.add_subplot(gs[1, 0])
+    ax_PCA.set(adjustable='box', aspect='equal')
+    ax_PCA.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
 
-    for dim in dims:
-        if dim == 1 or dim == 2 or dim == 3:
-            # Conducting the principal components analysis
-            pca = PCA(n_components=dim)
-            pc_result = pca.fit_transform(array)
+    # Conducting the t-distributed stochastic neighbor embedding
+    tsne = TSNE(n_components=dim, verbose=0, perplexity=40, n_iter=300)
+    tsne_results = tsne.fit_transform(array)
+    # adjusted x&y lims
+    ax_tSNE_adj = fig.add_subplot(gs[0, 1])
+    ax_tSNE_adj.set(adjustable='box', aspect='equal')
+    ax_tSNE_adj.set_title("tSNE")
+    ax_tSNE_adj.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
+    if ax_tSNE_xlim is None and ax_tSNE_ylim is None:  # only getting set the first time
+        ax_tSNE_xlim = [i * xy_axis_scaler for i in ax_tSNE_adj.get_xlim()]
+        ax_tSNE_ylim = [i * xy_axis_scaler for i in ax_tSNE_adj.get_ylim()]
+    ax_tSNE_adj.set_xlim(ax_tSNE_xlim)
+    ax_tSNE_adj.set_ylim(ax_tSNE_ylim)
+    # automatic x&y lims
+    ax_tSNE = fig.add_subplot(gs[1, 1])
+    ax_tSNE.set(adjustable='box', aspect='equal')
+    ax_tSNE.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
 
-            ax_l = fig.add_subplot(1, 2, 1)
-            ax_l.set(adjustable='box', aspect='equal')
-            ax_l.set_title("PCA")
-            ax_l.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
+    # Colorbar
+    mappable = ax_tSNE_adj.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
 
-            # Conducting the t-distributed stochastic neighbor embedding
-            tsne = TSNE(n_components=dim, verbose=0, perplexity=40, n_iter=300)
-            tsne_results = tsne.fit_transform(array)
+    # TODO
+    #  full save
+    #  Calculate PCA before tSNE
+    # TODO detect if ax.dataLim > x/ylim, and generate new plot
 
-            ax_r = fig.add_subplot(1, 2, 2)
-            ax_r.set(adjustable='box', aspect='equal')
-            ax_r.set_title("tSNE")
-            mappable = ax_r.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
+    # Colorbar set-up
+    cbar = fig.colorbar(mappable, ax=[ax_PCA_adj, ax_PCA, ax_tSNE_adj, ax_tSNE], shrink=1, anchor=(0.95, 0))
+    cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])  # TODO: make ticks not hard-coded
 
-            # TODO
-            #  full save
-            #  Calculate PCA before tSNE
-            # TODO detect if ax.dataLim > x/ylim, and generate new plot
+    # Additional_info set-up
+    if additional_info:
+        # ax_text = fig.add_subplot(2, 1, 3)
+        fig.text(0.05, 0.05, f"Mean: {array.mean():.8f}  std: {array.std():.8f}  Var: {array.var():.8f}",
+                 fontsize=15, rotation="vertical")
 
-            # Colorbar set-up
-            cbar = fig.colorbar(mappable, ax=[ax_l, ax_r], shrink=1, anchor=(0.95, 0))
-            cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])  # TODO: make ticks not hard-coded
+    plt.show()
 
-            # Additional_info set-up
-            if additional_info:
-                # ax_text = fig.add_subplot(2, 1, 3)
-                fig.text(0.05, 0.1, f"Mean:{array.mean():.8f}  std:{array.std():.8f}  Var:{array.var():.8f}",
-                         fontsize=15)
+    fig.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
 
-            fig.subplots_adjust(bottom=0.15, top=0.9, left=0.1, right=0.8)
-
-            plt.show()
-
-            fig.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
-            pass
-        else:
-            print(f"Dimension provided is not humanly understandable, dimension is {dim}")
-    pass
+    return (ax_PCA_xlim, ax_PCA_ylim), (ax_tSNE_xlim, ax_tSNE_ylim)
 
 
 def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save=False):
