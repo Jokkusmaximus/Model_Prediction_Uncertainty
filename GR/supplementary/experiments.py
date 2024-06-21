@@ -61,7 +61,7 @@ def ex_different_action_logstd():
     :return: None
     """
     #logstds = [25, 10, 5, 1, 0.1, 0.01, 0.001, 0.0001]  # Viable range found: max 25(50->ERROR), min 0.0001
-    logstds = [0.01]
+    logstds = [2, 1, 0.1, 0.05, 0.01, 0.005]    # Suggested values from Oli
 
     timings = np.zeros(shape=(1 + len(logstds)))
     start_time = time.time()
@@ -80,7 +80,7 @@ def ex_different_action_logstd():
         cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds)
         timings[i + 1] = time.time() - start_time
 
-    for i in range(len(timings), 1, -1):
+    for i in range(len(timings)-1, 1, -1):
         timings[i] = timings[i] - timings[i-1]
 
     print(f"Training time mean: {np.mean(timings)}, max: {np.max(timings)}, min: {np.min(timings)}")
