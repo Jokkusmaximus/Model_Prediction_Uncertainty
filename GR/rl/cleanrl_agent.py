@@ -143,15 +143,15 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True, save_array_per_rollout=False):
+def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3, save_array_per_rollout=False):
     """
     TODO: remove redundant "0" at place 0 of actions and observations being saved
     TODO: implement env != None
-    TODO: enable logging of actions and observations
     TODO(optional): make nicer progress_bar
     :param env:
     :param action_std:
     :param path_additional:
+    :param verbosity: how much information should be printed; 0: None, 1: important, 2: interesting, 3: supplemental
     :return:
     """
 
@@ -227,14 +227,27 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
     next_done = torch.zeros(args.num_envs).to(device)
     num_updates = args.total_timesteps // args.batch_size
 
+    # ** Adding custom scalars **
+    # Create dynamic list of action_logstds being saved to summarywriter
+    list_action_logstds = []
+    for i in range(envs.single_action_space.shape[0]):
+        list_action_logstds.append(f"own/action_logstd_{i}")
+    layout = {
+        "Own Tracker": {
+            "action_logstds": ["Multiline", list_action_logstds],
+        }
+    }
+    writer.add_custom_scalars(layout)
+
     # Print at start of training
-    if verbose:
+    if verbosity >= 1:  # Important
         if action_std is not None:
             print(f"Started training on {args.env_id} at {start_time} with action standard deviation {action_std}")
         else:
             print(f"Started training on {args.env_id} at {start_time}")
 
     for update in range(1, num_updates + 1):
+        episodic_rewards = []
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
             frac = 1.0 - (update - 1.0) / num_updates
@@ -262,11 +275,13 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        if verbose:
-                            print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                        # if verbosity >= 1:      # Classified as important print
+                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-                        # TODO implement reward per rollout
+                        episodic_rewards.append(info["episode"]["r"])
+
+        rollout_reward = sum(episodic_rewards) / len(episodic_rewards)
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -360,26 +375,25 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        if verbose:
+        if verbosity >= 1:      # important
             print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        # ** method to add actor_logstd to tensorboard **   # TODO: investigate if actor_logstd truly only changes per update, otherwise modify method
-        if verbose:
-            print("***"*10)
-            print(agent.actor_logstd, " : ", update)
-            print(f"tensor size: {agent.actor_logstd.size()}, dim 0: {agent.actor_logstd.size(dim=0)}, dim 1: {agent.actor_logstd.size(dim=1)}")
-        dict_actor_logstd = {}
+        # ** recording agent_logstds, and reward per rollout **   # TODO: investigate if actor_logstd truly only changes per update, otherwise modify method
+        # * logging agent_logstds *
         np_agent_logstd = agent.actor_logstd.detach().numpy()
         np_agent_logstd = np.squeeze(np_agent_logstd)
-        for i in range(agent.actor_logstd.size(dim=0)):
-            dict_actor_logstd[f'arr_item{i}'] = np_agent_logstd[i]
-            if verbose:
-                print(f"array: {np_agent_logstd}, elem {i}: {np_agent_logstd[i]}")
-                print(f"dict: {dict_actor_logstd}")
-        writer.add_scalars("charts/actor_logstd", dict_actor_logstd, update)
-        if verbose:
-            print("***"*10)
+        for i in range(agent.actor_logstd.size(dim=1)):
+            writer.add_scalar(f"own/action_logstd_{i}", np_agent_logstd[i], update)
+        if verbosity >= 3:      # supplemental
+            print(f"action_logstds array: {np_agent_logstd}")
+
+        # * logging reward per rollout
+        np_rewards = rewards.detach().numpy()
+        if verbosity >= 3:
+            print(f"rollout: {update}, sum rewards: {np_rewards.sum()}, sum abs rewards: {np.absolute(np_rewards).sum()}, rewards size: {np.shape(np_rewards)}, episodic_return / num_episodes: {rollout_reward}")
+        writer.add_scalar("own/rollout_rewards_sum", np_rewards.sum(), update)  # TODO why different episodic_return / num_episodes
+        writer.add_scalar("own/rollout_reward", rollout_reward, update)
 
         # *** log actions & observations for space exploration
         # temp np arrays of tensors
@@ -392,20 +406,18 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
         np.copyto(copy_action, temp_actions)
         np_observations[update - 1] = copy_obs
         np_actions[update - 1] = copy_action
-        # print(
-        #     f"Update: {update}, current obs tensor: {np.squeeze(torch.Tensor.numpy(obs))}, "
-        #     f"current act tensor: {np.squeeze(torch.Tensor.numpy(actions))}")
-        # print(np_observations)
-        # print(np_actions)
+
+        if verbosity >= 1:
+            print("*****" * 5, f"End of Rollout {update} / {num_updates + 1}", "*****" * 5)
 
     # ** Prints information **
-    if verbose:
-        print("#####" * 5)
+    if verbosity >= 1:      # important
+        print("#####" * 10)
         print(f"Total time: {time.time() - start_time}")
         print(
             f"mean SPS over {args.total_timesteps} timesteps: {int(args.total_timesteps / (time.time() - start_time))}")
         print(f"observations size : {np_observations.shape}, actions size : {np_actions.shape}")
-        print("#####" * 5)
+        print("#####" * 10)
 
     # ** Saving the numpy arrays, as a compressed npz file **
     np.savez_compressed(

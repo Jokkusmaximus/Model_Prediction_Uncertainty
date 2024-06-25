@@ -72,7 +72,7 @@ def ex_different_action_logstd():
         for i in range(len(logstds)):
             print(f"Training model {i + 1} / {len(logstds)}")
             path_addtion = f"{start_time}_{logstds[i]}"
-            cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i], verbose=True)
+            cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i], verbosity=0)
             timings[i+1] = time.time() - start_time
     except TypeError:
         print(f"Training model")
