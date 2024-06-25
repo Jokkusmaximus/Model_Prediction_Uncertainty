@@ -266,6 +266,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
                             print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                        # TODO implement reward per rollout
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -363,6 +364,23 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
             print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
+        # ** method to add actor_logstd to tensorboard **   # TODO: investigate if actor_logstd truly only changes per update, otherwise modify method
+        if verbose:
+            print("***"*10)
+            print(agent.actor_logstd, " : ", update)
+            print(f"tensor size: {agent.actor_logstd.size()}, dim 0: {agent.actor_logstd.size(dim=0)}, dim 1: {agent.actor_logstd.size(dim=1)}")
+        dict_actor_logstd = {}
+        np_agent_logstd = agent.actor_logstd.detach().numpy()
+        np_agent_logstd = np.squeeze(np_agent_logstd)
+        for i in range(agent.actor_logstd.size(dim=0)):
+            dict_actor_logstd[f'arr_item{i}'] = np_agent_logstd[i]
+            if verbose:
+                print(f"array: {np_agent_logstd}, elem {i}: {np_agent_logstd[i]}")
+                print(f"dict: {dict_actor_logstd}")
+        writer.add_scalars("charts/actor_logstd", dict_actor_logstd, update)
+        if verbose:
+            print("***"*10)
+
         # *** log actions & observations for space exploration
         # temp np arrays of tensors
         temp_obs = np.squeeze(torch.Tensor.numpy(obs))
@@ -377,8 +395,8 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbose=True
         # print(
         #     f"Update: {update}, current obs tensor: {np.squeeze(torch.Tensor.numpy(obs))}, "
         #     f"current act tensor: {np.squeeze(torch.Tensor.numpy(actions))}")
-        print(np_observations)
-        print(np_actions)
+        # print(np_observations)
+        # print(np_actions)
 
     # ** Prints information **
     if verbose:
