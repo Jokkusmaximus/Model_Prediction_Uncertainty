@@ -275,8 +275,8 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        # if verbosity >= 1:      # Classified as important print
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                        if verbosity >= 1:      # Classified as important print
+                            print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                         episodic_rewards.append(info["episode"]["r"])
@@ -385,6 +385,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
         np_agent_logstd = np.squeeze(np_agent_logstd)
         for i in range(agent.actor_logstd.size(dim=1)):
             writer.add_scalar(f"own/action_logstd_{i}", np_agent_logstd[i], update)
+        writer.add_scalar("own/mean_action_logstd", np.mean(np_agent_logstd), update)
         if verbosity >= 3:      # supplemental
             print(f"action_logstds array: {np_agent_logstd}")
 

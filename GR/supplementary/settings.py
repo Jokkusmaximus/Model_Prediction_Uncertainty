@@ -25,7 +25,7 @@ rl_config = {
     "policy_type": "MlpPolicy",
     "config_name": "cleanrl_test",
     "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000 (seems like it cannot be more than 1000 in env)
-    "custom_total_timesteps": 1000000,
+    "custom_total_timesteps": 4000000,
     # "learning_rate": 1e-3,
     "model_hyperparams": {},
     "description": "Add description",
