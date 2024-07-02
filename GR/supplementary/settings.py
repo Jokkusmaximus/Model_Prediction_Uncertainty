@@ -12,7 +12,7 @@ NUM_ENV_SAMPLES = 300_000
 TRAIN_TEST_RELATIVE = 0.8
 N_EPOCHS = 25
 BATCH_SIZE = 256
-SEED = 42
+SEED = 17       # next 42
 N_NEURONS_HIDDEN = 256
 LR = 0.001
 
@@ -23,7 +23,7 @@ wm_config = {
 # RL parameters
 rl_config = {
     "policy_type": "MlpPolicy",
-    "config_name": "cleanrl_test",
+    "config_name": "seeds",
     "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000 (seems like it cannot be more than 1000 in env)
     "custom_total_timesteps": 4000000,
     # "learning_rate": 1e-3,

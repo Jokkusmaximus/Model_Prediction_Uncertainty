@@ -13,6 +13,7 @@ from supplementary.settings import (
     get_path_addition,
     set_current_time,
     set_path_addition,
+    SEED
 )
 
 
@@ -60,7 +61,6 @@ def ex_different_action_logstd():
     Method which iterates over a hard-coded array of log_stds, and trains new cleanRL models for each log_std
     :return: None
     """
-    #logstds = [25, 10, 5, 1, 0.1, 0.01, 0.001, 0.0001]  # Viable range found: max 25(50->ERROR), min 0.0001
     logstds = [2, 1, 0.1, 0.05, 0.01, 0.005]    # Suggested values from Oli
 
     timings = np.zeros(shape=(1 + len(logstds)))
@@ -71,12 +71,12 @@ def ex_different_action_logstd():
     try:
         for i in range(len(logstds)):
             print(f"Training model {i + 1} / {len(logstds)}")
-            path_addtion = f"{start_time}_{logstds[i]}"
+            path_addtion = f"{SEED}_{start_time}_{logstds[i]}"
             cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i], verbosity=1)
             timings[i+1] = time.time() - start_time
     except TypeError:
         print(f"Training model")
-        path_addtion = f"{start_time}_{logstds}"
+        path_addtion = f"{SEED}_{start_time}_{logstds}"
         cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds)
         timings[i + 1] = time.time() - start_time
 
