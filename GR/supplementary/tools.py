@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from math import floor, ceil
 
-from supplementary.visualizer import visualize_PCA, visualize_tSNE, create_plots
+from supplementary.visualizer import visualize_PCA, visualize_tSNE, create_4_plots
 
 
 def clean_nan_entries(array, verbose=False):
@@ -88,26 +88,24 @@ def visualize_action_logstds(times_sliced=10):
             slice_size = floor(np_arr.shape[0] / times_sliced)
             for i in range(times_sliced):
                 temp_array = np_arr[i * slice_size:(i + 1) * slice_size]
-                create_plots(temp_array, title=f"{name}_action_logstd:{key}_{i}", custom_scaling=name)
+                create_4_plots(temp_array, title=f"{name}_action_logstd:{key}_{i}", custom_scaling=name)
                 print(f"Time spent on calculating division {i}: {time.time() - start_time}, with size {slice_size}")
                 start_time = time.time()
 
             # visualize_PCA(temp_array, dims=2, title=f"{name}_action_logstd:{key}_{i}", full_save=False)
 
 
-def visualize_per_rollout(lim_create_plots=np.inf):
+def visualize_per_rollout(lim_create_plots=np.inf, only_tSNE=False):
     """
-
+    !! There is a bug, that I've decided to keep, this function creates one more plot than requested, the final is extra
     :param lim_create_plots: TODO: BUG: creates one plot more than the limit
+    :param only_tSNE: bool if only tSNE plots should be generated
     :return:
     """
     # TODO: create plots between rollout x and y. e.g. final 25 rollouts
     # TODO: figure out if the plots are made exactly per rollout, could be shifted due to rounding error.
-    savepath = "logs/cleanrl_test/rl_model_1718878944.6847048_1/"
+    savepath = "logs/seeds/rl_model_17_1719907633.7666404_2/"
     nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
-    # nparrz = np.load("logs/cleanrl_test/rl_model_1718200844.9319282/data.npz", allow_pickle=True)
-    # nparrz = np.load("logs/cleanrl_test/rl_model_1718876308.8511665_0.01/data.npz", allow_pickle=True)
-    # nparrz = np.load("logs/cleanrl_test/rl_model_1718878944.6847048_2/data.npz", allow_pickle=True)
 
     for name in nparrz.files:
         np_arr = nparrz[name]
@@ -122,36 +120,55 @@ def visualize_per_rollout(lim_create_plots=np.inf):
         slice_size = 2048
         num_rollouts = floor(np_arr.shape[0] / slice_size)
 
-        xy_lims_pca = [None, None]
-        xy_lims_tsne = [None, None]
+        if only_tSNE:
+            tSNE_arrays = []
+            tSNE_titles = []
+        else:
+            xy_lims_pca = [None, None]
+            xy_lims_tsne = [None, None]
+
+        # If request more plots than rollouts, make one plot per rollout
         if lim_create_plots >= num_rollouts:
             for i in range(num_rollouts):
-                print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}",
-                      "*****" * 100)
+                print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}")
                 temp_arr = np_arr[i * slice_size:(i + 1) * slice_size]
-                xy_lims_pca, xy_lims_tsne = create_plots(temp_arr, title=f"{name}_rollout:{i}", save_path=savepath,
-                                                         xy_lims_pca=xy_lims_pca, xy_lims_tsne=xy_lims_tsne)
+                if only_tSNE:
+                    tSNE_arrays.append(temp_arr)
+                    tSNE_titles.append(f"rollout:{i}")
+                else:
+                    xy_lims_pca, xy_lims_tsne = create_4_plots(temp_arr, title=f"{name}_rollout:{i}",
+                                                               save_path=savepath,
+                                                               xy_lims_pca=xy_lims_pca, xy_lims_tsne=xy_lims_tsne)
+            if only_tSNE:
+                visualize_tSNE(tSNE_arrays, save_path=savepath, plot_title=f"{name}", titles=tSNE_titles)
 
+        # if request less plots than rollouts and is an int, create as many plots as requested
         elif isinstance(lim_create_plots, int):
             slice_jump = ceil(
                 num_rollouts / lim_create_plots)  # Space between rollouts which are used to create plots
-            print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}, slice_jump:{slice_jump}",
-                  "*****" * 100)
-            for i in range(
-                    lim_create_plots):  # Here "lim_create_plots" is an int (expected behavior)
-                # Creating all plots between 0 & lim_create_plots-1
+            print(f"num_rollouts: {num_rollouts}, lim_create_plots: {lim_create_plots}, slice_jump:{slice_jump}")
+            for i in range(lim_create_plots):  # Here "lim_create_plots" is an int (expected behavior)
+                # Extracting arrays per rollout between 0 & lim_create_plots-1
                 temp_arr = np_arr[i * slice_jump * slice_size: ((i * slice_jump) + 1) * slice_size]
-                xy_lims_pca, xy_lims_tsne = create_plots(temp_arr, title=f"{name}_rollout:{i * slice_jump}",
-                                                         save_path=savepath, xy_lims_pca=xy_lims_pca,
-                                                         xy_lims_tsne=xy_lims_tsne)
 
-                # print(f"array size: {len(temp_arr)}")
+                if only_tSNE:
+                    tSNE_arrays.append(temp_arr)
+                    tSNE_titles.append(f"rollout:{i * slice_jump}")
+                else:
+                    xy_lims_pca, xy_lims_tsne = create_4_plots(temp_arr, title=f"{name}_rollout:{i * slice_jump}",
+                                                               save_path=savepath, xy_lims_pca=xy_lims_pca,
+                                                               xy_lims_tsne=xy_lims_tsne)
             # Create plot of final rollout
             temp_arr = np_arr[(num_rollouts - 1) * slice_size: num_rollouts * slice_size]
-            print(f"Mean:{temp_arr.mean():.8f}  std:{temp_arr.std():.8f}  Var:{temp_arr.var():.8f}")
-            create_plots(temp_arr, title=f"{name}_rollout:{num_rollouts - 1}",
-                                                     save_path=savepath, xy_lims_pca=xy_lims_pca,
-                                                     xy_lims_tsne=xy_lims_tsne)
+            # print(f"Mean:{temp_arr.mean():.8f}  std:{temp_arr.std():.8f}  Var:{temp_arr.var():.8f}")
+            if only_tSNE:
+                tSNE_arrays.append(temp_arr)
+                tSNE_titles.append(f"rollout:{num_rollouts - 1}")
+                visualize_tSNE(tSNE_arrays, save_path=savepath, plot_title=f"{name}", titles=tSNE_titles)
+            else:
+                create_4_plots(temp_arr, title=f"{name}_rollout:{num_rollouts - 1}", save_path=savepath,
+                               xy_lims_pca=xy_lims_pca,
+                               xy_lims_tsne=xy_lims_tsne)
             # print(f"array size: {len(temp_arr)}", "::", f"{(num_rollouts - 1) * slice_size}: {num_rollouts * slice_size} : full size {len(np_arr)}")
         else:
             print(f"is \"lim_create_plots\" set, but not an int? type: {type(lim_create_plots)}")

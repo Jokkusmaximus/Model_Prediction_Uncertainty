@@ -61,11 +61,10 @@ def visualize_RL():  # TODO: implement this functionality, TODO2: decide if need
     # env.close()
 
 
-def create_plots(array=None, title="plot", save_path=None, full_save=False, xy_lims_pca=None, xy_lims_tsne=None,
-                 additional_info=True):
-    # TODO make both PCA & tSNE available, combine PCA & tSNE if too large
-    # TODO set axis scaling (logarithmic / Asinh), aut detect points outside scaling, and generate addition plot fitting
-    # TODO implement verbose
+def create_4_plots(array=None, title="plot", save_path=None, full_save=False, xy_lims_pca=None, xy_lims_tsne=None,
+                   additional_info=False, additional_PCA=False):
+    # TODO combine PCA & tSNE if too large
+    # TOD aut detect points outside scaling, and generate addition plot fitting: done in visualize_tSNE
 
     # *** Handling information not provided ***
     if array is None:
@@ -107,37 +106,23 @@ def create_plots(array=None, title="plot", save_path=None, full_save=False, xy_l
         c[i] = i
 
     # * Fig setup *
-    # fig, axs = plt.subplots(ncols=2, nrows=2) #, sharex=True, sharey=True
-    fig = plt.figure(figsize=(10, 7), constrained_layout=True)
-    fig.suptitle(title)
-    widths = [1, 1]
     heights = [1, 1]
-    gs = GridSpec(2, 2, figure=fig, width_ratios=widths, height_ratios=heights)
+    widths = [1]
+    if additional_PCA:
+        fig = plt.figure(figsize=(10, 7), layout="constrained")
+        widths = [1, 1]
+        gs = GridSpec(2, 2, figure=fig, width_ratios=widths, height_ratios=heights)
+    else:
+        fig = plt.figure(figsize=(5, 7), layout="constrained")
+        gs = GridSpec(2, 1, figure=fig, width_ratios=widths, height_ratios=heights)
+    fig.suptitle(title)
     gs.tight_layout(fig, rect=2)
-
-    # Conducting the principal components analysis
-    pca = PCA(n_components=dim)
-    pc_result = pca.fit_transform(array)
-    # adjusted x&y lims
-    ax_PCA_adj = fig.add_subplot(gs[0, 0])
-    ax_PCA_adj.set(adjustable='box', aspect='equal')
-    ax_PCA_adj.set_title("PCA")
-    ax_PCA_adj.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
-    if ax_PCA_xlim is None and ax_PCA_ylim is None:
-        ax_PCA_xlim = [i * xy_axis_scaler for i in ax_PCA_adj.get_xlim()]
-        ax_PCA_ylim = [i * xy_axis_scaler for i in ax_PCA_adj.get_ylim()]
-    ax_PCA_adj.set_xlim(ax_PCA_xlim)
-    ax_PCA_adj.set_ylim(ax_PCA_ylim)
-    # automatic x&y lims
-    ax_PCA = fig.add_subplot(gs[1, 0])
-    ax_PCA.set(adjustable='box', aspect='equal')
-    ax_PCA.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
 
     # Conducting the t-distributed stochastic neighbor embedding
     tsne = TSNE(n_components=dim, verbose=0, perplexity=40, n_iter=300)
     tsne_results = tsne.fit_transform(array)
     # adjusted x&y lims
-    ax_tSNE_adj = fig.add_subplot(gs[0, 1])
+    ax_tSNE_adj = fig.add_subplot(gs[0, 0])
     ax_tSNE_adj.set(adjustable='box', aspect='equal')
     ax_tSNE_adj.set_title("tSNE")
     ax_tSNE_adj.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
@@ -147,9 +132,28 @@ def create_plots(array=None, title="plot", save_path=None, full_save=False, xy_l
     ax_tSNE_adj.set_xlim(ax_tSNE_xlim)
     ax_tSNE_adj.set_ylim(ax_tSNE_ylim)
     # automatic x&y lims
-    ax_tSNE = fig.add_subplot(gs[1, 1])
+    ax_tSNE = fig.add_subplot(gs[1, 0])
     ax_tSNE.set(adjustable='box', aspect='equal')
     ax_tSNE.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
+
+    if additional_PCA:
+        # Conducting the principal components analysis
+        pca = PCA(n_components=dim)
+        pc_result = pca.fit_transform(array)
+        # adjusted x&y lims
+        ax_PCA_adj = fig.add_subplot(gs[0, 1])
+        ax_PCA_adj.set(adjustable='box', aspect='equal')
+        ax_PCA_adj.set_title("PCA")
+        ax_PCA_adj.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
+        if ax_PCA_xlim is None and ax_PCA_ylim is None:
+            ax_PCA_xlim = [i * xy_axis_scaler for i in ax_PCA_adj.get_xlim()]
+            ax_PCA_ylim = [i * xy_axis_scaler for i in ax_PCA_adj.get_ylim()]
+        ax_PCA_adj.set_xlim(ax_PCA_xlim)
+        ax_PCA_adj.set_ylim(ax_PCA_ylim)
+        # automatic x&y lims
+        ax_PCA = fig.add_subplot(gs[1, 1])
+        ax_PCA.set(adjustable='box', aspect='equal')
+        ax_PCA.scatter(pc_result[:, 0], pc_result[:, 1], c=c, cmap=colormaps["plasma"])
 
     # Colorbar
     mappable = ax_tSNE_adj.scatter(tsne_results[:, 0], tsne_results[:, 1], c=c, cmap=colormaps["plasma"])
@@ -160,15 +164,19 @@ def create_plots(array=None, title="plot", save_path=None, full_save=False, xy_l
     # TODO detect if ax.dataLim > x/ylim, and generate new plot
 
     # Colorbar set-up
-    cbar = fig.colorbar(mappable, ax=[ax_PCA_adj, ax_PCA, ax_tSNE_adj, ax_tSNE], shrink=1, anchor=(0.95, 0))
+    if additional_PCA:
+        cbar = fig.colorbar(mappable, ax=[ax_tSNE_adj, ax_tSNE, ax_PCA_adj, ax_PCA], shrink=1, anchor=(0.95, 0))
+    else:
+        cbar = fig.colorbar(mappable, ax=[ax_tSNE_adj, ax_tSNE], shrink=1, anchor=(0.95, 0))
     cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])  # TODO: make ticks not hard-coded
 
     # Additional_info set-up
     if additional_info:
         # ax_text = fig.add_subplot(2, 1, 3)
-        fig.text(0.05, 0.05, f"Mean: {array.mean():.8f}  std: {array.std():.8f}  Var: {array.var():.8f}",
+        fig.text(0.02, 0.05, f"Mean: {array.mean():.8f}  std: {array.std():.8f}  Var: {array.var():.8f}",
                  fontsize=15, rotation="vertical")
 
+    # fig.subplots_adjust(0.1, 0.05, 0.85, 0.95)
     plt.show()
 
     fig.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
@@ -274,19 +282,20 @@ def visualize_PCA(array=None, dims=None, save_path=None, title="Plot", full_save
 
 
 def visualize_tSNE(
-        array=None,
+        arrays=[],
         dims=None,
         save_path=None,
-        title="Plot",
+        plot_title=None,
+        titles=None,
         time_calculations=True,
         full_save=False,
 ):
     """
     Method to visualize an array using PCA downsampling
-    :param array: The array with data to be downsampled & visualized
+    :param arrays: list of arrays which are used for the tSNE plotting
     :param dims: Dimensionality of output. eithr 2D or 3D
     :param save_path: Path to the folder in which the images will be saved
-    :param title: Title of the plot
+    :param titles: Titles of the plots
     :param time_calculations: Boolean determining if the calculations should be timed
     :param full_save: Boolean determining if the plot should be saved using several filetypes
     :return: None
@@ -294,51 +303,103 @@ def visualize_tSNE(
     if save_path is None:
         print("Please provide a path to save the images")
         return False
-    if dims is None:
-        visualize_tSNE(
-            array=array,
-            dims=3,
-            save_path=save_path,
-            title=title,
-            time_calculations=time_calculations,
-        )  # 3D
+    # TODO implement 3D
+    if dims is None:  # calling for 3D before 2d if not specified
+        #     visualize_tSNE(
+        #         arrays=arrays,
+        #         dims=3,
+        #         save_path=save_path,
+        #         plot_title=plot_title,
+        #         titles=titles,
+        #         time_calculations=time_calculations,
+        #     )  # 3D
         dims = 2  # calculate 2D
 
     # Preparation for colourmap, simply going from first entry to last entry
-    c = np.zeros(len(array))
-    for i in range(len(array)):
+    c = np.zeros(len(arrays[0]))  # assuming all arrays are of the same lenght
+    for i in range(len(c)):
         c[i] = i
 
-    if time_calculations:  # method for timing the calculation of tSNE
-        time_start = time.time()
+    # TODO remove of reimplement
+    # if time_calculations:  # method for timing the calculation of tSNE
+    #     time_start = time.time()
+    # if time_calculations:  # method for timing the calculation of tSNE
+    #     print("t-SNE done! Time elapsed: {} seconds".format(time.time() - time_start))
 
-    # Conducting the t-distributed stochastic neighbor embedding
-    tsne = TSNE(n_components=dims, verbose=1, perplexity=40, n_iter=300)
-    tsne_results = tsne.fit_transform(array)
+    tsne_results = []
+    max_axis_size = 0
+    max_x_axis = 0
+    max_y_axis = 0
+    i = 0
+    for array in arrays:  # Conducting the t-distributed stochastic neighbor embedding for all arrays
+        tsne = TSNE(n_components=dims, verbose=0, perplexity=40, n_iter=300)
+        tsne_results.append(tsne.fit_transform(array))
+        for j in range(len(tsne_results[i])):
+            max_x_axis = max(max_x_axis, tsne_results[i][j][0])
+            max_y_axis = max(max_y_axis, tsne_results[i][j][1])
+        max_axis_size = max(max_x_axis, max_y_axis, max_axis_size)
 
-    if time_calculations:  # method for timing the calculation of tSNE
-        print("t-SNE done! Time elapsed: {} seconds".format(time.time() - time_start))
+        print(max_axis_size)
 
-    # Pyplot
-    fig = plt.figure()
-    fig.suptitle(title)
-    ax = fig.add_subplot()
-    ax.scatter(
-        tsne_results[:, 0],
-        tsne_results[:, 1],
-        c=c,
-        cmap=colormaps["plasma"],
-    )
+        i += 1
 
-    # Show pyplot figure
+    # scale up max_axis_size
+    max_axis_size = 1.05 * max_axis_size
+
+    # Create one long figure containing all plots
+    fig = plt.figure(figsize=(7, 5 * len(arrays)), layout="constrained")
+    heights = [1 for _ in range(len(arrays))]
+    gs = GridSpec(len(arrays), 1, figure=fig, height_ratios=heights)
+    fig.suptitle(plot_title, fontsize="xx-large")
+
+    axs_arr = []
+
+    for i in range(len(arrays)):
+        ax = fig.add_subplot(gs[i])
+        ax.set(adjustable='box', aspect='equal')
+        ax.set_title(titles[i])
+        ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])
+        ax.set_xlim([-max_axis_size, max_axis_size])
+        ax.set_ylim([-max_axis_size, max_axis_size])
+        axs_arr.append(ax)
+
+    # Creating Colorbar
+    mappable = ax.scatter(tsne_results[0][:, 0], tsne_results[0][:, 1], c=c, cmap=colormaps["plasma"])
+    cbar = fig.colorbar(mappable, ax=axs_arr, aspect=50)  # , anchor=(0.95, 0)
+    cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])
+
     plt.show()
 
+    # Save long figure
     if save_path is not None:
         save_path = f"{save_path}"
         # Make folder
         os.makedirs(save_path, exist_ok=True)
-        fig.savefig(f"{save_path}tSNE_{title}.png", bbox_inches="tight")
+        fig.savefig(f"{save_path}tSNE_{plot_title}_long.png", bbox_inches="tight")
         if full_save:  # save other relevant filetypes
-            fig.savefig(f"{save_path}PCA_{title}.pdf", bbox_inches="tight", format="pdf")
-            fig.savefig(f"{save_path}PCA_{title}.svg", bbox_inches="tight", format="svg")
-    pass
+            fig.savefig(f"{save_path}tSNE_{plot_title}_long.pdf", bbox_inches="tight", format="pdf")
+            fig.savefig(f"{save_path}tSNE_{plot_title}_long.svg", bbox_inches="tight", format="svg")
+
+    # Create one figure per plot, and save
+    for i in range(len(tsne_results)):
+        fig = plt.figure(figsize=(6, 5))
+        fig.suptitle(f"{plot_title} {titles[i]}", fontsize="xx-large")
+        ax = fig.add_subplot()
+        ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])
+        ax.set_xlim([-max_axis_size, max_axis_size])
+        ax.set_ylim([-max_axis_size, max_axis_size])
+        mappable = ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])  # similar line 388, optimze possible?
+        cbar = fig.colorbar(mappable, ax=ax)
+        cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])  # TODO: make ticks not hard-coded
+
+        # Save each figure
+        if save_path is not None:
+            save_path = f"{save_path}"
+            # Make folder
+            os.makedirs(save_path, exist_ok=True)
+            fig.savefig(f"{save_path}tSNE_{plot_title}_{titles[i]}.png", bbox_inches="tight")
+            if full_save:  # save other relevant filetypes
+                fig.savefig(f"{save_path}tSNE_{plot_title}_{titles[i]}.pdf", bbox_inches="tight", format="pdf")
+                fig.savefig(f"{save_path}tSNE_{plot_title}_{titles[i]}.svg", bbox_inches="tight", format="svg")
+
+        plt.show()
