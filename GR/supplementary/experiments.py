@@ -61,7 +61,8 @@ def ex_different_action_logstd():
     Method which iterates over a hard-coded array of log_stds, and trains new cleanRL models for each log_std
     :return: None
     """
-    logstds = [2, 1, 0.1, 0.05, 0.01, 0.005]    # Suggested values from Oli
+    # logstds = [2, 1, 0.1, 0.05, 0.01, 0.005]    # Suggested values from Oli
+    logstds = [1]
 
     timings = np.zeros(shape=(1 + len(logstds)))
     start_time = time.time()

@@ -7,7 +7,6 @@ import numpy as np
 
 import torch
 import gymnasium as gym
-# from lightning.pytorch import seed_everything     # TODO remove
 
 from rl.sb3_agent import train_rl_model
 from supplementary.settings import SEED, PROJECT_ENV

@@ -338,9 +338,6 @@ def visualize_tSNE(
             max_x_axis = max(max_x_axis, tsne_results[i][j][0])
             max_y_axis = max(max_y_axis, tsne_results[i][j][1])
         max_axis_size = max(max_x_axis, max_y_axis, max_axis_size)
-
-        print(max_axis_size)
-
         i += 1
 
     # scale up max_axis_size
@@ -355,16 +352,16 @@ def visualize_tSNE(
     axs_arr = []
 
     for i in range(len(arrays)):
-        ax = fig.add_subplot(gs[i])
-        ax.set(adjustable='box', aspect='equal')
-        ax.set_title(titles[i])
-        ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])
-        ax.set_xlim([-max_axis_size, max_axis_size])
-        ax.set_ylim([-max_axis_size, max_axis_size])
-        axs_arr.append(ax)
+        ax_l = fig.add_subplot(gs[i])
+        ax_l.set(adjustable='box', aspect='equal')
+        ax_l.set_title(titles[i])
+        ax_l.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])
+        ax_l.set_xlim([-max_axis_size, max_axis_size])
+        ax_l.set_ylim([-max_axis_size, max_axis_size])
+        axs_arr.append(ax_l)
 
     # Creating Colorbar
-    mappable = ax.scatter(tsne_results[0][:, 0], tsne_results[0][:, 1], c=c, cmap=colormaps["plasma"])
+    mappable = ax_l.scatter(tsne_results[-1][:, 0], tsne_results[-1][:, 1], c=c, cmap=colormaps["plasma"])
     cbar = fig.colorbar(mappable, ax=axs_arr, aspect=50)  # , anchor=(0.95, 0)
     cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])
 

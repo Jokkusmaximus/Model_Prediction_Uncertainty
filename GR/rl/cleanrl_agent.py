@@ -130,6 +130,7 @@ class Agent(nn.Module):
     def get_action_and_value(self, x, action=None):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
+        action_logstd = torch.tensor([0, 0, 0, 0, 0, 0])        # OBS! Only hardcoded for testing
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         if action is None:
@@ -275,7 +276,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        if verbosity >= 1:      # Classified as important print
+                        if verbosity >= 1:  # Classified as important print
                             print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
@@ -375,7 +376,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        if verbosity >= 1:      # important
+        if verbosity >= 1:  # important
             print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
@@ -386,14 +387,16 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
         for i in range(agent.actor_logstd.size(dim=1)):
             writer.add_scalar(f"own/action_logstd_{i}", np_agent_logstd[i], update)
         writer.add_scalar("own/mean_action_logstd", np.mean(np_agent_logstd), update)
-        if verbosity >= 3:      # supplemental
+        if verbosity >= 3:  # supplemental
             print(f"action_logstds array: {np_agent_logstd}")
 
         # * logging reward per rollout
         np_rewards = rewards.detach().numpy()
         if verbosity >= 3:
-            print(f"rollout: {update}, sum rewards: {np_rewards.sum()}, sum abs rewards: {np.absolute(np_rewards).sum()}, rewards size: {np.shape(np_rewards)}, episodic_return / num_episodes: {rollout_reward}")
-        writer.add_scalar("own/rollout_rewards_sum", np_rewards.sum(), update)  # TODO why different episodic_return / num_episodes
+            print(
+                f"rollout: {update}, sum rewards: {np_rewards.sum()}, sum abs rewards: {np.absolute(np_rewards).sum()}, rewards size: {np.shape(np_rewards)}, episodic_return / num_episodes: {rollout_reward}")
+        writer.add_scalar("own/rollout_rewards_sum", np_rewards.sum(),
+                          update)  # TODO why different episodic_return / num_episodes
         writer.add_scalar("own/rollout_reward", rollout_reward, update)
 
         # *** log actions & observations for space exploration
@@ -412,7 +415,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
             print("*****" * 5, f"End of Rollout {update} / {num_updates + 1}", "*****" * 5)
 
     # ** Prints information **
-    if verbosity >= 1:      # important
+    if verbosity >= 1:  # important
         print("#####" * 10)
         print(f"Total time: {time.time() - start_time}")
         print(

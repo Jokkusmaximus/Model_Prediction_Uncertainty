@@ -95,16 +95,18 @@ def visualize_action_logstds(times_sliced=10):
             # visualize_PCA(temp_array, dims=2, title=f"{name}_action_logstd:{key}_{i}", full_save=False)
 
 
-def visualize_per_rollout(lim_create_plots=np.inf, only_tSNE=False):
+def visualize_per_rollout(savepath=None, lim_create_plots=np.inf, only_tSNE=False):
     """
     !! There is a bug, that I've decided to keep, this function creates one more plot than requested, the final is extra
+    :param savepath:
     :param lim_create_plots: TODO: BUG: creates one plot more than the limit
     :param only_tSNE: bool if only tSNE plots should be generated
     :return:
     """
     # TODO: create plots between rollout x and y. e.g. final 25 rollouts
     # TODO: figure out if the plots are made exactly per rollout, could be shifted due to rounding error.
-    savepath = "logs/seeds/rl_model_17_1719907633.7666404_2/"
+    if savepath is None:
+        savepath = "logs/seeds/rl_model_1_1719859234.805307_0.1/"
     nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
 
     for name in nparrz.files:
