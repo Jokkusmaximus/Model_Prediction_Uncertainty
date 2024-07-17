@@ -11,12 +11,13 @@ start_time = datetime.now()
 start_time2 = time()
 # -------------------------------------------
 
-savepaths = ["logs/seeds/rl_model_17_1719938269.4566817_0.1/",
-             "logs/seeds/rl_model_17_1719938269.4566817_0.01/",
-             "logs/seeds/rl_model_17_1719938269.4566817_0.05/",
-             "logs/seeds/rl_model_17_1719938269.4566817_0.005/",
-             "logs/seeds/rl_model_17_1719938269.4566817_1/",
-             "logs/seeds/rl_model_17_1719938269.4566817_2/",]
+savepaths = ["logs/special_cases/const_logstd_24_1720976154.5299006_0.1/",
+             "logs/special_cases/const_logstd_24_1720976154.5299006_0.01/",
+             "logs/special_cases/const_logstd_24_1720976154.5299006_0.05/",
+             "logs/special_cases/const_logstd_24_1720976154.5299006_0.005/",
+             "logs/special_cases/const_logstd_24_1720976154.5299006_1/",
+             "logs/special_cases/const_logstd_24_1720976154.5299006_1.5/",
+             "logs/special_cases/const_logstd_24_1720976154.5299006_2/",]
 
 for savepath in savepaths:
     visualize_per_rollout(savepath, 10, True)

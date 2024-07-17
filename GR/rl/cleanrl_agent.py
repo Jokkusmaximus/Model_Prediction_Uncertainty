@@ -22,14 +22,14 @@ from math import ceil
 
 from cleanrl.rpo_continuous_action import make_env
 
-from supplementary.settings import SEED, rl_config, PROJECT_ENV, set_current_time, set_path_addition, get_current_time
+from supplementary.settings import get_seed, rl_config, PROJECT_ENV, set_current_time, set_path_addition, get_current_time
 
 
 @dataclass
 class Args:
     exp_name: str = os.path.basename(__file__)[: -len(".py")]  # TODO: what does this do?
     """the name of this experiment"""
-    seed: int = SEED
+    seed: int = get_seed()
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -53,7 +53,7 @@ class Args:
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    num_steps: int = 2048
+    num_steps: int = 2048                                       # OBS! Doubled (2048 -> 4096) as part of experiment 2.2(ind_rollout)
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -122,7 +122,7 @@ class Agent(nn.Module):
         else:
             data = torch.zeros(1, np.prod(envs.single_action_space.shape))
         # print(f"Data: {data}", "*****", f"action_logstd: {action_logstd}", "*****")
-        self.actor_logstd = nn.Parameter(data)
+        self.actor_logstd = nn.Parameter(data, requires_grad=False)     # OBS! grad disabled for experiment 2.1
 
     def get_value(self, x):
         return self.critic(x)
@@ -130,7 +130,6 @@ class Agent(nn.Module):
     def get_action_and_value(self, x, action=None):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
-        action_logstd = torch.tensor([0, 0, 0, 0, 0, 0])        # OBS! Only hardcoded for testing
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         if action is None:
@@ -175,6 +174,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
         )
 
     # ** Logging setup **
+    run_name = rl_config["run_name"]
     config_name = rl_config["config_name"]  # Configuration name used in folder structure
     current_time = get_current_time()
     if path_additional is None and current_time == 0:  # no path addition -> current time is path addition
@@ -183,7 +183,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
         set_path_addition(current_time)  # saving to access from other methods
         path_additional = current_time
 
-    logpath = (f"./logs/{config_name}/rl_model_{path_additional}/")
+    logpath = (f"./logs/{config_name}/{run_name}_{path_additional}/")
     writer = SummaryWriter(logpath)  # modified to my schema
     writer.add_text(
         "hyperparameters",

@@ -2,16 +2,8 @@
 Created on 05.04.24
 by: jokkus
 '''
-import random
-import numpy as np
-
-import torch
-import gymnasium as gym
-
-from rl.sb3_agent import train_rl_model
-from supplementary.settings import SEED, PROJECT_ENV
 from supplementary.experiments import ex_different_lr, ex_different_action_logstd
-
+from supplementary.settings import set_seed, SEED, get_seed
 
 # seeds and generators
 # torch.manual_seed(SEED)
@@ -28,7 +20,16 @@ from supplementary.experiments import ex_different_lr, ex_different_action_logst
 # env = gym.make(PROJECT_ENV)
 # env.action_space.seed(SEED)
 
-ex_different_action_logstd()
+print(SEED)
+ex_different_action_logstd([2])
+set_seed(41)
+print(get_seed())
+ex_different_action_logstd([2])
+
+
+# ex_different_action_logstd(logstds=[2, 1.5,  1, 0.1, 0.05, 0.01, 0.005])
+# set_seed(17)
+# ex_different_action_logstd(logstds=[2, 1.5,  1, 0.1, 0.05, 0.01, 0.005])
 
 # train_rl_model(env=env)
 

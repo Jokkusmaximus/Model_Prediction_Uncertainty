@@ -13,7 +13,7 @@ from supplementary.settings import (
     get_path_addition,
     set_current_time,
     set_path_addition,
-    SEED
+    get_seed,
 )
 
 
@@ -56,13 +56,12 @@ def ex_different_lr(num_tests=10, env=None, lrs=None):
         )
 
 
-def ex_different_action_logstd():
+def ex_different_action_logstd(logstds=[2, 1.5, 1, 0.1, 0.05, 0.01, 0.005]):
     """
     Method which iterates over a hard-coded array of log_stds, and trains new cleanRL models for each log_std
     :return: None
     """
-    # logstds = [2, 1, 0.1, 0.05, 0.01, 0.005]    # Suggested values from Oli
-    logstds = [1]
+    SEED = get_seed()
 
     timings = np.zeros(shape=(1 + len(logstds)))
     start_time = time.time()
@@ -74,16 +73,14 @@ def ex_different_action_logstd():
             print(f"Training model {i + 1} / {len(logstds)}")
             path_addtion = f"{SEED}_{start_time}_{logstds[i]}"
             cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i], verbosity=1)
-            timings[i+1] = time.time() - start_time
+            timings[i + 1] = time.time() - start_time
     except TypeError:
         print(f"Training model")
         path_addtion = f"{SEED}_{start_time}_{logstds}"
         cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds)
         timings[i + 1] = time.time() - start_time
 
-    for i in range(len(timings)-1, 1, -1):
-        timings[i] = timings[i] - timings[i-1]
+    for i in range(len(timings) - 1, 1, -1):
+        timings[i] = timings[i] - timings[i - 1]
 
     print(f"Training time mean: {np.mean(timings)}, max: {np.max(timings)}, min: {np.min(timings)}")
-
-

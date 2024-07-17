@@ -12,7 +12,7 @@ NUM_ENV_SAMPLES = 300_000
 TRAIN_TEST_RELATIVE = 0.8
 N_EPOCHS = 25
 BATCH_SIZE = 256
-SEED = 17       # next 42
+SEED = 11
 N_NEURONS_HIDDEN = 256
 LR = 0.001
 
@@ -23,9 +23,10 @@ wm_config = {
 # RL parameters
 rl_config = {
     "policy_type": "MlpPolicy",
-    "config_name": "seeds",
+    "config_name": "special_cases",
+    "run_name": "const_logstd",
     "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000 (seems like it cannot be more than 1000 in env)
-    "custom_total_timesteps": 4000000,
+    "custom_total_timesteps": 2000000,
     # "learning_rate": 1e-3,
     "model_hyperparams": {},
     "description": "Add description",
@@ -56,3 +57,13 @@ def set_path_addition(path):
 
 def get_path_addition():
     return path_addition
+
+
+def set_seed(seed):
+    global SEED
+    SEED = seed
+    print(f"SEED set to: {SEED}")
+
+
+def get_seed():
+    return SEED
