@@ -22,8 +22,8 @@ from math import ceil
 
 from cleanrl.rpo_continuous_action import make_env
 
-from supplementary.settings import get_seed, rl_config, PROJECT_ENV, set_current_time, set_path_addition, get_current_time
-
+from supplementary.settings import get_seed, PROJECT_ENV, set_current_time, set_path_addition, \
+    get_current_time, get_rl_config
 
 @dataclass
 class Args:
@@ -47,13 +47,13 @@ class Args:
     # Algorithm specific arguments
     env_id: str = PROJECT_ENV
     """the id of the environment"""
-    total_timesteps: int = rl_config["custom_total_timesteps"]
+    total_timesteps: int = get_rl_config()["custom_total_timesteps"]
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    num_steps: int = 2048                                       # OBS! Doubled (2048 -> 4096) as part of experiment 2.2(ind_rollout)
+    num_steps: int = 2048  # OBS! Doubled (2048 -> 4096) as part of experiment 2.2(ind_rollout)
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -98,7 +98,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, rpo_alpha, action_logstd=None):
+    def __init__(self, envs, rpo_alpha, action_logstd=None, actor_logstd_grad=True):
         super().__init__()
         self.rpo_alpha = rpo_alpha
         self.critic = nn.Sequential(
@@ -121,7 +121,7 @@ class Agent(nn.Module):
             data = torch.tensor(data)
         else:
             data = torch.zeros(1, np.prod(envs.single_action_space.shape))
-        self.actor_logstd = nn.Parameter(data, requires_grad=True)     # OBS! gradient disabled for experiment 2
+        self.actor_logstd = nn.Parameter(data, requires_grad=actor_logstd_grad)  # OBS! gradient disabled for experiment 2
 
     def get_value(self, x):
         return self.critic(x)
@@ -142,18 +142,19 @@ class Agent(nn.Module):
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
 
 
-def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3, save_array_per_rollout=False):
+def train_rl_model(env=None, action_logstd=None, path_additional=None, verbosity=3, actor_logstd_grad=True,
+                   manually_adjust_action_logstd=False):
     """
     TODO: remove redundant "0" at place 0 of actions and observations being saved
     TODO: implement env != None
     TODO(optional): make nicer progress_bar
     :param env:
-    :param action_std:
+    :param action_logstd:
     :param path_additional:
     :param verbosity: how much information should be printed; 0: None, 1: important, 2: interesting, 3: supplemental
+    :param manually_adjust_action_logstd: BOOL if action logstd should be manually adjusted
     :return:
     """
-
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
@@ -173,6 +174,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
         )
 
     # ** Logging setup **
+    rl_config = get_rl_config()
     run_name = rl_config["run_name"]
     config_name = rl_config["config_name"]  # Configuration name used in folder structure
     current_time = get_current_time()
@@ -204,7 +206,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
     )
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
-    agent = Agent(envs, args.rpo_alpha, action_std).to(device)
+    agent = Agent(envs, args.rpo_alpha, action_logstd, actor_logstd_grad).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -239,10 +241,15 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
     }
     writer.add_custom_scalars(layout)
 
+    # ** manually_adjust_action_logstd setup **
+    action_logstd_lims = [0, 1500, 2500]
+    action_logstd_lim_val = [2, 1.5, 1, 0.5]  # len = len(action_logstd_lims) +1, including start>lims[0]
+
     # Print at start of training
     if verbosity >= 1:  # Important
-        if action_std is not None:
-            print(f"Started training on {args.env_id} at {start_time} with action standard deviation {action_std}")
+        if action_logstd is not None:
+            print(
+                f"Started training on {args.env_id} at {start_time} with action log standard deviation {action_logstd}")
         else:
             print(f"Started training on {args.env_id} at {start_time}")
 
@@ -282,6 +289,34 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
                         episodic_rewards.append(info["episode"]["r"])
 
         rollout_reward = sum(episodic_rewards) / len(episodic_rewards)
+        # ** Modification for manually_adjust_action_logstd **
+        if manually_adjust_action_logstd:
+            data = np.empty((1, np.prod(envs.single_action_space.shape)))
+            match rollout_reward:
+                case rollout_reward if rollout_reward < action_logstd_lims[0]:  # start -> [0]
+                    if verbosity >= 3:
+                        print(f"Reward {rollout_reward} <  {action_logstd_lims[0]}", agent.actor_logstd)
+                    action_logstd = action_logstd_lim_val[0]
+                case rollout_reward if action_logstd_lims[0] < rollout_reward < action_logstd_lims[
+                    1]:  # [0] -> [1]
+                    if verbosity >= 3:
+                        print(f"Reward {rollout_reward} > {action_logstd_lims[0]}", agent.actor_logstd)
+                    action_logstd = action_logstd_lim_val[1]
+                case rollout_reward if action_logstd_lims[1] < rollout_reward < action_logstd_lims[
+                    2]:  # [1] -> [2]
+                    if verbosity >= 3:
+                        print(f"Reward {rollout_reward} > {action_logstd_lims[1]}", agent.actor_logstd)
+                    action_logstd = action_logstd_lim_val[2]
+                case rollout_reward if rollout_reward > action_logstd_lims[2]:  # [2] -> inf
+                    if verbosity >= 3:
+                        print(f"Reward {rollout_reward} > {action_logstd_lims[2]}", agent.actor_logstd)
+                    action_logstd = action_logstd_lim_val[3]
+                case _:
+                    print(rollout_reward)
+            data.fill(action_logstd)
+            data = torch.tensor(data)
+            agent.actor_logstd = nn.Parameter(data, requires_grad=actor_logstd_grad)
+            # INOF gradient disabled for experiment 2
 
         # bootstrap value if not done
         with torch.no_grad():
