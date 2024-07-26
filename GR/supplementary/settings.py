@@ -12,7 +12,7 @@ NUM_ENV_SAMPLES = 300_000
 TRAIN_TEST_RELATIVE = 0.8
 N_EPOCHS = 25
 BATCH_SIZE = 256
-SEED = 11
+SEED = 17
 N_NEURONS_HIDDEN = 256
 LR = 0.001
 
@@ -23,9 +23,10 @@ wm_config = {
 # RL parameters
 rl_config = {
     "policy_type": "MlpPolicy",
-    "config_name": "special_cases",
+    "config_name": "temp",
     "run_name": "const_logstd",
-    "custom_max_episode_steps": 1024,  # two episodes per policy update, standard is 1000 (seems like it cannot be more than 1000 in env)
+    "custom_max_episode_steps": 1024,
+    # two episodes per policy update, standard is 1000 (seems like it cannot be more than 1000 in env)
     "custom_total_timesteps": 2000000,
     # "learning_rate": 1e-3,
     "model_hyperparams": {},
@@ -37,6 +38,7 @@ current_time = 0
 path_addition = ""
 
 NUM_SAVES = 10
+
 
 # ** getters & setters **
 def set_current_time(datetime):
@@ -67,3 +69,18 @@ def set_seed(seed):
 
 def get_seed():
     return SEED
+
+
+def set_rl_config(rl_config_new):
+    """
+    Setting the rl_config anew
+    INFO: not possible to change totalt_timesteps during execution, due to cleanrl_agent.Args only being executed on import
+    :param rl_config_new:
+    :return:
+    """
+    global rl_config
+    rl_config = rl_config_new
+
+
+def get_rl_config():
+    return rl_config

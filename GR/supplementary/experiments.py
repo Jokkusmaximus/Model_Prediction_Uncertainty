@@ -72,15 +72,31 @@ def ex_different_action_logstd(logstds=[2, 1.5, 1, 0.1, 0.05, 0.01, 0.005]):
         for i in range(len(logstds)):
             print(f"Training model {i + 1} / {len(logstds)}")
             path_addtion = f"{SEED}_{start_time}_{logstds[i]}"
-            cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds[i], verbosity=1)
+            cleanrl_agent.train_rl_model(path_additional=path_addtion, action_logstd=logstds[i], verbosity=1,
+                                         actor_logstd_grad=True, manually_adjust_action_logstd=False)
             timings[i + 1] = time.time() - start_time
     except TypeError:
         print(f"Training model")
         path_addtion = f"{SEED}_{start_time}_{logstds}"
-        cleanrl_agent.train_rl_model(path_additional=path_addtion, action_std=logstds)
+        cleanrl_agent.train_rl_model(path_additional=path_addtion, action_logstd=logstds, actor_logstd_grad=True,
+                                     manually_adjust_action_logstd=False)
         timings[i + 1] = time.time() - start_time
 
     for i in range(len(timings) - 1, 1, -1):
         timings[i] = timings[i] - timings[i - 1]
 
     print(f"Training time mean: {np.mean(timings)}, max: {np.max(timings)}, min: {np.min(timings)}")
+
+
+def ex_different_seed_logstd_mod(seeds=[1, 11, 17, 24, 41]):
+    """
+    Method for training models with different seeds, using the manually modified actor_logstd
+    :param seeds:
+    :return:
+    """
+    start_time = time.time()
+    for SEED in seeds:
+        path_addtion = f"{SEED}_{start_time}"
+        cleanrl_agent.train_rl_model(path_additional=path_addtion, verbosity=1,
+                                     actor_logstd_grad=False, manually_adjust_action_logstd=True)
+    pass
