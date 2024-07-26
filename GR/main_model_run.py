@@ -21,10 +21,10 @@ from supplementary.settings import set_seed, SEED, get_seed
 # env.action_space.seed(SEED)
 
 print(SEED)
-ex_different_action_logstd([2])
-set_seed(41)
-print(get_seed())
-ex_different_action_logstd([2])
+ex_different_action_logstd()
+
+
+
 
 
 # ex_different_action_logstd(logstds=[2, 1.5,  1, 0.1, 0.05, 0.01, 0.005])

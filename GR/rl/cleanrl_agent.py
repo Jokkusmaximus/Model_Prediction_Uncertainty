@@ -121,8 +121,7 @@ class Agent(nn.Module):
             data = torch.tensor(data)
         else:
             data = torch.zeros(1, np.prod(envs.single_action_space.shape))
-        # print(f"Data: {data}", "*****", f"action_logstd: {action_logstd}", "*****")
-        self.actor_logstd = nn.Parameter(data, requires_grad=False)     # OBS! grad disabled for experiment 2.1
+        self.actor_logstd = nn.Parameter(data, requires_grad=True)     # OBS! gradient disabled for experiment 2
 
     def get_value(self, x):
         return self.critic(x)
@@ -380,7 +379,7 @@ def train_rl_model(env=None, action_std=None, path_additional=None, verbosity=3,
             print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-        # ** recording agent_logstds, and reward per rollout **   # TODO: investigate if actor_logstd truly only changes per update, otherwise modify method
+        # ** recording agent_logstds, and reward per rollout **
         # * logging agent_logstds *
         np_agent_logstd = agent.actor_logstd.detach().numpy()
         np_agent_logstd = np.squeeze(np_agent_logstd)
