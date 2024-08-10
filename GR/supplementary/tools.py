@@ -8,21 +8,38 @@ import numpy as np
 import pandas as pd
 from math import floor, ceil
 
-from supplementary.visualizer import visualize_PCA, visualize_tSNE, create_4_plots
+from supplementary.visualizer import visualize_tSNE, create_4_plots, create_distribution_plot
 
 
-def clean_nan_entries(array, verbose=False):
-    """
-    Removes rows with NaN values OBS: only evaluates the 0th value of each row, will lead to bugs if the entire row is not Nan
-    :param array: Array from which NaN walues will be remove
-    :return: array without NaN values
-    """
-    nan_arr = pd.isna(array)
-    cleaned_arr = np.delete(array, nan_arr, 0)
+def visualize_action_distribution(savepath=None, verbosity=1):
+    # load data
+    nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
 
-    if verbose:
-        print(f"Removed {len(array) - len(cleaned_arr)} NaN values, {len(cleaned_arr)} entries remaining")
-    return cleaned_arr
+    np_arr = nparrz['actions']  # only interested in the actions
+
+    # array cleaning
+    np_arr = clean_nan_entries(np_arr)  # remove NaN entries
+    np_arr = np.vstack(np_arr)
+    np_arr = np.squeeze(np_arr)  # Remove axes of length one from np_arr
+
+    ## Dataframe preparation ##
+    # change to pd.dataframe
+    df = pd.DataFrame(np_arr)
+
+    # Add time (from index), rename columns, 'melt' to longform data (old column names now variables)
+    df = df.rename_axis('time').reset_index()
+    df.rename(columns={0: 'ac1', 1: 'ac2', 2: 'ac3', 3: 'ac4', 4: 'ac5', 5: 'ac6'}, inplace=True)
+
+    dfm = df.melt(id_vars=['time'], value_vars=['ac1', 'ac2', 'ac3', 'ac4', 'ac5', 'ac6'])
+
+    if verbosity >= 3:      # unimportant information
+        print(f"Array shape: {np_arr.shape}")
+        print(f"Dataframe:\n {df.head()}")
+        print(f"Modified:\n {dfm.head()}")
+
+        print(f"Max value: \n {dfm.max()} \n Min Value: \n {dfm.min()}")
+    # create plot
+    # create_distribution_plot(dfm)
 
 
 def visualize_action_logstds(times_sliced=10):
@@ -99,8 +116,8 @@ def visualize_per_rollout(savepath=None, lim_create_plots=np.inf, only_tSNE=Fals
     """
     !! There is a bug, that I've decided to keep, this function creates one more plot than requested, the final is extra
     :param savepath:
-    :param lim_create_plots: TODO: BUG: creates one plot more than the limit
-    :param only_tSNE: bool if only tSNE plots should be generated
+    :param lim_create_plots: int, Limit for how many plots should be generated !!BUG: creates one plot more than the limit
+    :param only_tSNE: bool, if only tSNE plots should be generated
     :return:
     """
     # TODO: create plots between rollout x and y. e.g. final 25 rollouts
@@ -174,3 +191,17 @@ def visualize_per_rollout(savepath=None, lim_create_plots=np.inf, only_tSNE=Fals
             # print(f"array size: {len(temp_arr)}", "::", f"{(num_rollouts - 1) * slice_size}: {num_rollouts * slice_size} : full size {len(np_arr)}")
         else:
             print(f"is \"lim_create_plots\" set, but not an int? type: {type(lim_create_plots)}")
+
+
+def clean_nan_entries(array, verbose=False):
+    """
+    Removes rows with NaN values OBS: only evaluates the 0th value of each row, will lead to bugs if the entire row is not Nan
+    :param array: Array from which NaN walues will be remove
+    :return: array without NaN values
+    """
+    nan_arr = pd.isna(array)
+    cleaned_arr = np.delete(array, nan_arr, 0)
+
+    if verbose:
+        print(f"Removed {len(array) - len(cleaned_arr)} NaN values, {len(cleaned_arr)} entries remaining")
+    return cleaned_arr
