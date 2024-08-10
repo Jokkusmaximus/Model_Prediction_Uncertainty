@@ -22,14 +22,15 @@ from math import ceil
 
 from cleanrl.rpo_continuous_action import make_env
 
-from supplementary.settings import get_seed, PROJECT_ENV, set_current_time, set_path_addition, \
+from supplementary.settings import SEED, PROJECT_ENV, set_current_time, set_path_addition, \
     get_current_time, get_rl_config
+
 
 @dataclass
 class Args:
     exp_name: str = os.path.basename(__file__)[: -len(".py")]  # TODO: what does this do?
     """the name of this experiment"""
-    seed: int = get_seed()
+    seed: int = SEED
     """seed of the experiment"""
     torch_deterministic: bool = True
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
@@ -121,7 +122,8 @@ class Agent(nn.Module):
             data = torch.tensor(data)
         else:
             data = torch.zeros(1, np.prod(envs.single_action_space.shape))
-        self.actor_logstd = nn.Parameter(data, requires_grad=actor_logstd_grad)  # OBS! gradient disabled for experiment 2
+        self.actor_logstd = nn.Parameter(data,
+                                         requires_grad=actor_logstd_grad)  # OBS! gradient disabled for experiment 2
 
     def get_value(self, x):
         return self.critic(x)
@@ -249,9 +251,9 @@ def train_rl_model(env=None, action_logstd=None, path_additional=None, verbosity
     if verbosity >= 1:  # Important
         if action_logstd is not None:
             print(
-                f"Started training on {args.env_id} at {start_time} with action log standard deviation {action_logstd}")
+                f"Started training on {args.env_id} at {start_time} with action log standard deviation {action_logstd}, and seed {SEED}")
         else:
-            print(f"Started training on {args.env_id} at {start_time}")
+            print(f"Started training on {args.env_id} at {start_time} with seed {SEED}")
 
     for update in range(1, num_updates + 1):
         episodic_rewards = []

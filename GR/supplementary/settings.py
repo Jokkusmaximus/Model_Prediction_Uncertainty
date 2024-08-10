@@ -12,7 +12,7 @@ NUM_ENV_SAMPLES = 300_000
 TRAIN_TEST_RELATIVE = 0.8
 N_EPOCHS = 25
 BATCH_SIZE = 256
-SEED = 17
+SEED = 1
 N_NEURONS_HIDDEN = 256
 LR = 0.001
 
@@ -59,16 +59,6 @@ def set_path_addition(path):
 
 def get_path_addition():
     return path_addition
-
-
-def set_seed(seed):
-    global SEED
-    SEED = seed
-    print(f"SEED set to: {SEED}")
-
-
-def get_seed():
-    return SEED
 
 
 def set_rl_config(rl_config_new):
