@@ -13,7 +13,7 @@ from supplementary.settings import (
     get_path_addition,
     set_current_time,
     set_path_addition,
-    get_seed,
+    SEED,
 )
 
 
@@ -61,8 +61,6 @@ def ex_different_action_logstd(logstds=[2, 1.5, 1, 0.1, 0.05, 0.01, 0.005]):
     Method which iterates over a hard-coded array of log_stds, and trains new cleanRL models for each log_std
     :return: None
     """
-    SEED = get_seed()
-
     timings = np.zeros(shape=(1 + len(logstds)))
     start_time = time.time()
 
@@ -88,15 +86,8 @@ def ex_different_action_logstd(logstds=[2, 1.5, 1, 0.1, 0.05, 0.01, 0.005]):
     print(f"Training time mean: {np.mean(timings)}, max: {np.max(timings)}, min: {np.min(timings)}")
 
 
-def ex_different_seed_logstd_mod(seeds=[1, 11, 17, 24, 41]):
-    """
-    Method for training models with different seeds, using the manually modified actor_logstd
-    :param seeds:
-    :return:
-    """
+def ex_modified_logsstd():
     start_time = time.time()
-    for SEED in seeds:
-        path_addtion = f"{SEED}_{start_time}"
-        cleanrl_agent.train_rl_model(path_additional=path_addtion, verbosity=1,
-                                     actor_logstd_grad=False, manually_adjust_action_logstd=True)
-    pass
+    path_addtion = f"{SEED}_{start_time}_mod"
+    cleanrl_agent.train_rl_model(path_additional=path_addtion, verbosity=1,
+                                 actor_logstd_grad=False, manually_adjust_action_logstd=True)
