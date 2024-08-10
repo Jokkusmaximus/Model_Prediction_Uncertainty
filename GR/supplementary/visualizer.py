@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 from matplotlib import colormaps
 from matplotlib.gridspec import GridSpec
 
+import seaborn as sns
+
 # from world_model.model_net import ModelNetwork
 from supplementary.settings import PROJECT_ENV
 
@@ -59,6 +61,29 @@ def visualize_RL():  # TODO: implement this functionality, TODO2: decide if need
     #     obs, _, _, _, _ = env.step(action)
     #     x = torch.concat(obs, action)
     # env.close()
+
+
+def create_distribution_plot(df=None, save_path=None, title=None):
+    # set theme (default)
+    sns.set_theme()
+
+    # load data
+    # dataset = sns.load_dataset("tips")
+
+    # prepare dataset
+    if df is None:
+        print("No array provided")
+        return False
+
+    # Creating the plot
+    sns.displot(data=df, x="value", y="time", hue="variable")
+
+    # Visualizing the plot
+    plt.show()
+
+    ## Save generated plot ##
+    if save_path is not None and title is not None:
+        plt.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
 
 
 def create_4_plots(array=None, title="plot", save_path=None, full_save=False, xy_lims_pca=None, xy_lims_tsne=None,
@@ -385,7 +410,8 @@ def visualize_tSNE(
         ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])
         ax.set_xlim([-max_axis_size, max_axis_size])
         ax.set_ylim([-max_axis_size, max_axis_size])
-        mappable = ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c, cmap=colormaps["plasma"])  # similar line 388, optimze possible?
+        mappable = ax.scatter(tsne_results[i][:, 0], tsne_results[i][:, 1], c=c,
+                              cmap=colormaps["plasma"])  # similar line 388, optimze possible?
         cbar = fig.colorbar(mappable, ax=ax)
         cbar.set_ticks(ticks=[0, 2048], labels=["Oldest", "Newest"])  # TODO: make ticks not hard-coded
 
