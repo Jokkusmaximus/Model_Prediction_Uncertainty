@@ -63,7 +63,7 @@ def visualize_RL():  # TODO: implement this functionality, TODO2: decide if need
     # env.close()
 
 
-def create_distribution_plot(df=None, save_path=None, title=None):
+def create_distribution_plot(df=None, save_path=None):
     # set theme (default)
     sns.set_theme()
 
@@ -75,15 +75,31 @@ def create_distribution_plot(df=None, save_path=None, title=None):
         print("No array provided")
         return False
 
-    # Creating the plot
-    sns.displot(data=df, x="value", y="time", hue="variable")
+    start_time = time.time()
+    ## Distribution of values per count ##
+    # Creating the histogram showing count of action values
+    sns.displot(data=df, x="value", hue="variable")
 
     # Visualizing the plot
     plt.show()
+    print(f"Time taken: {time.time() - start_time}, value per count")
 
-    ## Save generated plot ##
-    if save_path is not None and title is not None:
-        plt.savefig(f"{save_path}plots_{title}.png", bbox_inches="tight")
+    # Save generated plot
+    if save_path is not None:
+        plt.savefig(f"{save_path}histogram_actions.png", bbox_inches="tight")
+
+    start_time = time.time()
+    ## Distribution of values over time ##
+    # Creating the scatter plot showing actions over time
+    sns.displot(data=df, x="time", y="value", hue="variable")
+
+    # Visualizing the plot
+    plt.show()
+    print(f"Time taken: {time.time() - start_time}, value over time")
+
+    # Save generated plot
+    if save_path is not None:
+        plt.savefig(f"{save_path}scatter_actions.png", bbox_inches="tight")
 
 
 def create_4_plots(array=None, title="plot", save_path=None, full_save=False, xy_lims_pca=None, xy_lims_tsne=None,
