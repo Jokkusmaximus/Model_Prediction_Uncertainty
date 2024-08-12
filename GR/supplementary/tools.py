@@ -13,6 +13,9 @@ from supplementary.visualizer import visualize_tSNE, create_4_plots, create_dist
 
 def visualize_action_distribution(savepath=None, verbosity=1):
     # load data
+    if savepath is None:
+        print("Please provide the path of the data")
+        return None
     nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
 
     np_arr = nparrz['actions']  # only interested in the actions
@@ -28,9 +31,9 @@ def visualize_action_distribution(savepath=None, verbosity=1):
 
     # Add time (from index), rename columns, 'melt' to longform data (old column names now variables)
     df = df.rename_axis('time').reset_index()
-    df.rename(columns={0: 'ac1', 1: 'ac2', 2: 'ac3', 3: 'ac4', 4: 'ac5', 5: 'ac6'}, inplace=True)
+    df.rename(columns={0: 'action_1', 1: 'action_2', 2: 'action_3', 3: 'action_4', 4: 'action_5', 5: 'action_6'}, inplace=True)
 
-    dfm = df.melt(id_vars=['time'], value_vars=['ac1', 'ac2', 'ac3', 'ac4', 'ac5', 'ac6'])
+    dfm = df.melt(id_vars=['time'], value_vars=['action_1', 'action_2', 'action_3', 'action_4', 'action_5', 'action_6'])
 
     if verbosity >= 3:      # unimportant information
         print(f"Array shape: {np_arr.shape}")
@@ -38,8 +41,9 @@ def visualize_action_distribution(savepath=None, verbosity=1):
         print(f"Modified:\n {dfm.head()}")
 
         print(f"Max value: \n {dfm.max()} \n Min Value: \n {dfm.min()}")
-    # create plot
-    # create_distribution_plot(dfm)
+
+    # Create plot
+    create_distribution_plot(dfm, savepath)
 
 
 def visualize_action_logstds(times_sliced=10):
@@ -123,7 +127,7 @@ def visualize_per_rollout(savepath=None, lim_create_plots=np.inf, only_tSNE=Fals
     # TODO: create plots between rollout x and y. e.g. final 25 rollouts
     # TODO: figure out if the plots are made exactly per rollout, could be shifted due to rounding error.
     if savepath is None:
-        savepath = "logs/seeds/rl_model_1_1719859234.805307_0.1/"
+        savepath = "logs/seeds/rl_model_1_0.1/"
     nparrz = np.load(f"{savepath}data.npz", allow_pickle=True)
 
     for name in nparrz.files:
