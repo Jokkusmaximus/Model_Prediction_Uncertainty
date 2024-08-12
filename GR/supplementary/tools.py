@@ -43,7 +43,7 @@ def visualize_action_distribution(savepath=None, verbosity=1):
         print(f"Max value: \n {dfm.max()} \n Min Value: \n {dfm.min()}")
 
     # Create plot
-    create_distribution_plot(dfm, savepath)
+    create_distribution_plot(dfm, savepath, verbosity)
 
 
 def visualize_action_logstds(times_sliced=10):
